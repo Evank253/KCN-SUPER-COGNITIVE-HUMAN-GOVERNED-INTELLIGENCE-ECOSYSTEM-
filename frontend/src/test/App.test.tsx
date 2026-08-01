@@ -1,11 +1,10 @@
 /** Tests for App routing. */
 
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import App from '../App'
 
 // Mock useHealth to avoid fetch calls in tests
-import { vi } from 'vitest'
 vi.mock('../hooks/useHealth', () => ({
   useHealth: () => ({
     health: { status: 'healthy', version: '0.1.0', timestamp: '2026-08-01T00:00:00Z' },
@@ -15,15 +14,19 @@ vi.mock('../hooks/useHealth', () => ({
 }))
 
 describe('App', () => {
-  it('renders the dashboard heading on the root path', () => {
+  it('renders the public landing page on the root path', () => {
     render(<App />)
-    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', {
+        name: /KCN Super Cognitive Human Governed Intelligence Ecosystem/i,
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Explore Free Public Demo/i })).toBeInTheDocument()
   })
 
-  it('renders the navigation sidebar', () => {
+  it('shows Discord community link on the landing page', () => {
     render(<App />)
-    expect(screen.getByRole('heading', { name: 'Intelligence Hub' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Governance' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Intelligence' })).toBeInTheDocument()
+    const links = screen.getAllByRole('link', { name: /Discord/i })
+    expect(links.length).toBeGreaterThan(0)
   })
 })
