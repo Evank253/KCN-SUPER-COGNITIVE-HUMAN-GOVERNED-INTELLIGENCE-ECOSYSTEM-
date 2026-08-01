@@ -11,6 +11,9 @@ const DESTINATIONS: Record<string, { path?: string; external?: string; label: st
   demo: { path: '/dashboard', label: 'Public Demo' },
   governance: { path: '/governance', label: 'Governance' },
   intelligence: { path: '/intelligence', label: 'Intelligence' },
+  jarvis: { path: '/jarvis', label: 'Jarvis · Vibe' },
+  vibe: { path: '/jarvis', label: 'Jarvis · Vibe' },
+  kronos: { path: '/jarvis', label: 'Jarvis · Vibe' },
   admin: { path: '/login', label: 'Admin Login' },
   login: { path: '/login', label: 'Admin Login' },
   discord: { external: DISCORD_INVITE, label: 'Discord' },
@@ -26,6 +29,7 @@ function resolveDestination(input: string) {
   }
   if (/gov|policy|rule/.test(q)) return DESTINATIONS.governance
   if (/intel|ai|reason|research/.test(q)) return DESTINATIONS.intelligence
+  if (/jarvis|vibe|kronos|build|coder/.test(q)) return DESTINATIONS.jarvis
   if (/admin|login|operator/.test(q)) return DESTINATIONS.admin
   if (/discord|chat|community/.test(q)) return DESTINATIONS.discord
   if (/demo|try|start|dash/.test(q)) return DESTINATIONS.dashboard
@@ -173,6 +177,9 @@ export default function LandingPage() {
             <button type="button" onClick={() => portalTo(DESTINATIONS.dashboard)} style={navBtn}>
               Demo
             </button>
+            <button type="button" onClick={() => portalTo(DESTINATIONS.jarvis)} style={navBtn}>
+              Jarvis
+            </button>
             <button type="button" onClick={() => portalTo(DESTINATIONS.discord)} style={navBtn}>
               Discord
             </button>
@@ -260,7 +267,7 @@ export default function LandingPage() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="portal to dashboard · governance · intelligence · admin · discord"
+              placeholder="portal to jarvis · dashboard · governance · intelligence · admin · discord"
               aria-label="Portal command"
               style={{
                 flex: 1,
@@ -312,6 +319,7 @@ export default function LandingPage() {
           >
             {(
               [
+                ['jarvis', 'Jarvis · Vibe'],
                 ['dashboard', 'Public Demo'],
                 ['governance', 'Governance'],
                 ['intelligence', 'Intelligence'],
@@ -357,7 +365,7 @@ export default function LandingPage() {
             { t: 'Governance', d: 'Human authority & policy control' },
             { t: 'Intelligence', d: 'Research · reason · plan · create' },
             { t: 'Verification', d: 'Evidence · truth · reliability' },
-            { t: 'Security', d: 'Identity · encryption · monitoring' },
+            { t: 'Jarvis · Vibe', d: 'Speak · build · Kronos hardens' },
           ].map(({ t, d }) => (
             <div key={t} style={{ ...glass, padding: '1.1rem 1.2rem' }}>
               <h3
@@ -393,6 +401,10 @@ export default function LandingPage() {
           >
             GitHub
           </a>{' '}
+          ·{' '}
+          <Link to="/jarvis" style={{ color: '#93c5fd' }}>
+            Jarvis
+          </Link>{' '}
           ·{' '}
           <Link to="/dashboard" style={{ color: '#93c5fd' }}>
             Demo
