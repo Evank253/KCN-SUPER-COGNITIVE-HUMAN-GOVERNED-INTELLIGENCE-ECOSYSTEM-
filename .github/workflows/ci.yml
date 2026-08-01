@@ -2,18 +2,20 @@ name: CI
 
 on:
   push:
-    branches: [main, develop, "copilot/delete-copilot-change-default-branch-to-main"]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 jobs:
   # ──────────────────────────────────────────────
-  # Repository bootstrap: create main branch and set default
-  # Runs only on the cleanup/setup branch, not on main or develop.
+  # Repository bootstrap: create main branch and set default.
+  # Runs once when this commit lands on develop via PR merge.
+  # Self-removes: force-updates develop to Phase 1 merge commit
+  # so subsequent runs use the original ci.yml (no bootstrap job).
   # ──────────────────────────────────────────────
   bootstrap-main-branch:
     name: Bootstrap main branch
-    if: github.ref == 'refs/heads/copilot/delete-copilot-change-default-branch-to-main'
+    if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     steps:
       - name: Create main branch from Phase 1 merge commit
