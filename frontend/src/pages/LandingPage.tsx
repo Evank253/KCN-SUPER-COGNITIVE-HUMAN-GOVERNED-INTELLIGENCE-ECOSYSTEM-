@@ -260,8 +260,7 @@ export default function LandingPage() {
               gap: '0.5rem',
               padding: '0.55rem 0.65rem 0.55rem 1rem',
               marginBottom: '0.85rem',
-            }}
-          {>span<}<
+            }>
             {<span>}"style"{{ color: '#60a5fa', fontWeight: 700, fontSize: '0.85rem' }{<span>}
              <input
               ,"type="text")
