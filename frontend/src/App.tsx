@@ -1,5 +1,9 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import MainLayout from './layouts/MainLayout'
+import ProtectedRoute from './components/ProtectedRoute'
+import LandingPage from './pages/LandingPage'
+import LoginPage from './pages/LoginPage'
+import AdminPage from './pages/AdminPage'
 import DashboardPage from './pages/DashboardPage'
 import GovernancePage from './pages/GovernancePage'
 import IntelligencePage from './pages/IntelligencePage'
@@ -9,10 +13,28 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={<DashboardPage />} />
+        {/* Public landing */}
+        <Route path="/" element={<LandingPage />} />
+
+        {/* Auth */}
+        <Route path="/login" element={<LoginPage />} />
+
+        {/* Public demo pages (free for 2 weeks) */}
+        <Route element={<MainLayout />}>
+          <Route path="dashboard" element={<DashboardPage />} />
           <Route path="governance" element={<GovernancePage />} />
           <Route path="intelligence" element={<IntelligencePage />} />
+
+          {/* Protected admin (always free) */}
+          <Route
+            path="admin"
+            element={
+              <ProtectedRoute>
+                <AdminPage />
+              </ProtectedRoute>
+            }
+          />
+
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
