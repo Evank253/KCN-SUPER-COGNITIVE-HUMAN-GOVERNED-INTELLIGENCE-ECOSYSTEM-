@@ -2,20 +2,20 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, "copilot/kcn-super-cognitive-ecosystem"]
   pull_request:
     branches: [main, develop]
 
 jobs:
   # ──────────────────────────────────────────────
   # Repository bootstrap: create main branch and set default.
-  # Runs once when this commit lands on develop via PR merge.
-  # Self-removes: force-updates develop to Phase 1 merge commit
+  # Runs once when this commit lands on copilot/kcn-super-cognitive-ecosystem
+  # via PR merge. Self-removes: force-updates develop to Phase 1 merge commit
   # so subsequent runs use the original ci.yml (no bootstrap job).
   # ──────────────────────────────────────────────
   bootstrap-main-branch:
     name: Bootstrap main branch
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/copilot/kcn-super-cognitive-ecosystem'
     runs-on: ubuntu-latest
     steps:
       - name: Create main branch from Phase 1 merge commit
@@ -100,6 +100,32 @@ jobs:
           if echo "$response" | grep -q '"ref"'; then
             gh api "repos/${REPO}/git/refs/heads/copilot/kcn-super-cognitive-ecosystem" --method DELETE
             echo "✅ Deleted copilot/kcn-super-cognitive-ecosystem"
+          else
+            echo "Branch not found — skipping"
+          fi
+
+      - name: Delete copilot/delete-copilot-change-default-branch-to-main cleanup branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          response=$(gh api "repos/${REPO}/git/refs/heads/copilot/delete-copilot-change-default-branch-to-main" --silent 2>&1 || true)
+          if echo "$response" | grep -q '"ref"'; then
+            gh api "repos/${REPO}/git/refs/heads/copilot/delete-copilot-change-default-branch-to-main" --method DELETE
+            echo "✅ Deleted copilot/delete-copilot-change-default-branch-to-main"
+          else
+            echo "Branch not found — skipping"
+          fi
+
+      - name: Delete copilot/set-up-branch-protection-rules cleanup branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          response=$(gh api "repos/${REPO}/git/refs/heads/copilot/set-up-branch-protection-rules" --silent 2>&1 || true)
+          if echo "$response" | grep -q '"ref"'; then
+            gh api "repos/${REPO}/git/refs/heads/copilot/set-up-branch-protection-rules" --method DELETE
+            echo "✅ Deleted copilot/set-up-branch-protection-rules"
           else
             echo "Branch not found — skipping"
           fi
