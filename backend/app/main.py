@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.middleware.logging import LoggingMiddleware
-from app.routes import auth, governance, health, intelligence, verification
+from app.routes import auth, governance, health, intelligence, verification, vibe
 
 setup_logging()
 
@@ -51,3 +51,4 @@ app.include_router(
 app.include_router(
     verification.router, prefix=settings.api_prefix, tags=["Verification"]
 )
+app.include_router(vibe.router, prefix=settings.api_prefix, tags=["Vibe · Jarvis · Kronos"])

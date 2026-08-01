@@ -7,6 +7,7 @@ const NAV_LINKS = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/governance', label: 'Governance' },
   { to: '/intelligence', label: 'Intelligence' },
+  { to: '/jarvis', label: 'Jarvis · Vibe' },
 ]
 
 const DISCORD_INVITE = 'https://discord.gg/ZtYmsQRcR'

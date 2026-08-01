@@ -7,6 +7,7 @@ import AdminPage from './pages/AdminPage'
 import DashboardPage from './pages/DashboardPage'
 import GovernancePage from './pages/GovernancePage'
 import IntelligencePage from './pages/IntelligencePage'
+import JarvisPage from './pages/JarvisPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="governance" element={<GovernancePage />} />
           <Route path="intelligence" element={<IntelligencePage />} />
+          <Route path="jarvis" element={<JarvisPage />} />
 
           {/* Protected admin (always free) */}
           <Route

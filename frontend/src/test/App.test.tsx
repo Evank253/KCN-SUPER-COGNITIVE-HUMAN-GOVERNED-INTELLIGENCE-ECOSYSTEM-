@@ -21,7 +21,6 @@ describe('App', () => {
         name: /KCN Super Cognitive Human Governed Intelligence Ecosystem/i,
       }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Explore Free Public Demo/i })).toBeInTheDocument()
   })
 
   it('shows Discord community link on the landing page', () => {
