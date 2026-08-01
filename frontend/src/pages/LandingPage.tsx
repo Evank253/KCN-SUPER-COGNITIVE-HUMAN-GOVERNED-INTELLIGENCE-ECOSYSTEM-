@@ -1,6 +1,6 @@
 /** Public landing — hyperspace WebGL + command chat portal jumps. */
 
-import { FormEvent, useCallback, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import HyperspacePortal from '../components/HyperspacePortal'
 
@@ -24,13 +24,23 @@ function resolveDestination(input: string) {
   for (const [key, dest] of Object.entries(DESTINATIONS)) {
     if (q === key || q.includes(key)) return dest
   }
-  // free-text fallbacks
   if (/gov|policy|rule/.test(q)) return DESTINATIONS.governance
   if (/intel|ai|reason|research/.test(q)) return DESTINATIONS.intelligence
   if (/admin|login|operator/.test(q)) return DESTINATIONS.admin
   if (/discord|chat|community/.test(q)) return DESTINATIONS.discord
   if (/demo|try|start|dash/.test(q)) return DESTINATIONS.dashboard
   return DESTINATIONS.dashboard
+}
+
+const navBtn: React.CSSProperties = {
+  background: 'rgba(15, 23, 42, 0.5)',
+  border: '1px solid rgba(120,160,255,0.25)',
+  color: '#e2e8f0',
+  padding: '0.35rem 0.85rem',
+  borderRadius: '8px',
+  fontWeight: 600,
+  fontSize: '0.85rem',
+  cursor: 'pointer',
 }
 
 export default function LandingPage() {
@@ -41,8 +51,7 @@ export default function LandingPage() {
   const [status, setStatus] = useState('Systems initializing…')
   const [intensity, setIntensity] = useState(0.55)
 
-  // Boot sequence copy
-  useState(() => {
+  useEffect(() => {
     const t1 = window.setTimeout(() => setStatus('Neural lattice online'), 900)
     const t2 = window.setTimeout(() => setStatus('Governance layer linked'), 1600)
     const t3 = window.setTimeout(() => {
@@ -55,7 +64,7 @@ export default function LandingPage() {
       clearTimeout(t2)
       clearTimeout(t3)
     }
-  })
+  }, [])
 
   const portalTo = useCallback(
     (dest: { path?: string; external?: string; label: string }) => {
@@ -100,13 +109,11 @@ export default function LandingPage() {
         overflow: 'hidden',
         background: '#02040c',
         color: '#e8eefc',
-        fontFamily: "var(--font-sans)",
+        fontFamily: 'var(--font-sans)',
       }}
     >
-      {/* Full-viewport WebGL hyperspace */}
       <HyperspacePortal intensity={intensity} warpTrigger={warp} />
 
-      {/* Soft gradient overlay for readability */}
       <div
         style={{
           position: 'absolute',
@@ -118,9 +125,15 @@ export default function LandingPage() {
         }}
       />
 
-      {/* Content layer */}
-      <div style={{ position: 'relative', zIndex: 2, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        {/* Nav */}
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 2,
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         <header
           style={{
             display: 'flex',
@@ -157,11 +170,7 @@ export default function LandingPage() {
             </span>
           </div>
           <nav style={{ display: 'flex', gap: '0.85rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={() => portalTo(DESTINATIONS.dashboard)}
-              style={navBtn}
-            >
+            <button type="button" onClick={() => portalTo(DESTINATIONS.dashboard)} style={navBtn}>
               Demo
             </button>
             <button type="button" onClick={() => portalTo(DESTINATIONS.discord)} style={navBtn}>
@@ -170,14 +179,17 @@ export default function LandingPage() {
             <button
               type="button"
               onClick={() => portalTo(DESTINATIONS.admin)}
-              style={{ ...navBtn, background: 'rgba(59,130,246,0.35)', borderColor: 'rgba(96,165,250,0.5)' }}
+              style={{
+                ...navBtn,
+                background: 'rgba(59,130,246,0.35)',
+                borderColor: 'rgba(96,165,250,0.5)',
+              }}
             >
               Admin
             </button>
           </nav>
         </header>
 
-        {/* Hero */}
         <section
           style={{
             flex: 1,
@@ -226,11 +238,10 @@ export default function LandingPage() {
               lineHeight: 1.55,
             }}
           >
-            AI amplifies human capability. Humans keep authority. Type a command
-            or hit a node — the portal opens.
+            AI amplifies human capability. Humans keep authority. Type a command or hit a
+            node — the portal opens.
           </p>
 
-          {/* Command / chat bar */}
           <form
             onSubmit={handleCommand}
             style={{
@@ -290,7 +301,6 @@ export default function LandingPage() {
             {status}
           </p>
 
-          {/* Quick nodes */}
           <div
             style={{
               display: 'flex',
@@ -320,15 +330,6 @@ export default function LandingPage() {
                   fontWeight: 600,
                   fontSize: '0.9rem',
                   cursor: 'pointer',
-                  transition: 'transform 0.15s, box-shadow 0.15s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 0 28px rgba(80,140,255,0.35)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'none'
-                  e.currentTarget.style.boxShadow = glass.boxShadow as string
                 }}
               >
                 {label}
@@ -341,7 +342,6 @@ export default function LandingPage() {
           </p>
         </section>
 
-        {/* Module strip */}
         <section
           style={{
             display: 'grid',
@@ -360,7 +360,14 @@ export default function LandingPage() {
             { t: 'Security', d: 'Identity · encryption · monitoring' },
           ].map(({ t, d }) => (
             <div key={t} style={{ ...glass, padding: '1.1rem 1.2rem' }}>
-              <h3 style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.35rem', color: '#bfdbfe' }}>
+              <h3
+                style={{
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
+                  marginBottom: '0.35rem',
+                  color: '#bfdbfe',
+                }}
+              >
                 {t}
               </h3>
               <p style={{ fontSize: '0.8rem', color: 'rgba(180,190,220,0.75)' }}>{d}</p>
@@ -398,15 +405,4 @@ export default function LandingPage() {
       </div>
     </div>
   )
-}
-
-const navBtn: React.CSSProperties = {
-  background: 'rgba(15, 23, 42, 0.5)',
-  border: '1px solid rgba(120,160,255,0.25)',
-  color: '#e2e8f0',
-  padding: '0.35rem 0.85rem',
-  borderRadius: '8px',
-  fontWeight: 600,
-  fontSize: '0.85rem',
-  cursor: 'pointer',
 }
