@@ -262,7 +262,7 @@ export default function LandingPage() {
               marginBottom: '0.85rem',
             }}
           >
-            <span style={{ color: '#60a5fa', fontWeight: 700, fontSize: '0.85rem' }}>></span>
+            <span style={{ color: '#60a5fa', fontWeight: 700, fontSize: '0.85rem' }}>{'>'}</span>
             <input
               type="text"
               value={query}

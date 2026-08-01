@@ -3,6 +3,7 @@ import MainLayout from './layouts/MainLayout'
 import ProtectedRoute from './components/ProtectedRoute'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
+import AuthCallbackPage from './pages/AuthCallbackPage'
 import AdminPage from './pages/AdminPage'
 import DashboardPage from './pages/DashboardPage'
 import GovernancePage from './pages/GovernancePage'
@@ -19,6 +20,7 @@ export default function App() {
 
         {/* Auth */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
         {/* Public demo pages (free for 2 weeks) */}
         <Route element={<MainLayout />}>

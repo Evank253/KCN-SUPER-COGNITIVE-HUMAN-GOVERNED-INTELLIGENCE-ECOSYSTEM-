@@ -60,6 +60,47 @@ def create_refresh_token(subject: str) -> str:
     )
 
 
+def create_oauth_state_token() -> str:
+    """Create a short-lived signed token used as the OAuth 'state' parameter.
+
+    This protects the GitHub OAuth redirect against CSRF: we generate it before
+    redirecting to GitHub, and require the callback to return the exact same
+    signed value. Because it's signed with our JWT secret, an attacker can't
+    forge one, and it expires quickly if unused.
+    """
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=settings.oauth_state_expire_minutes
+    )
+    payload: dict[str, Any] = {"exp": expire, "type": "oauth_state"}
+    return jwt.encode(
+        payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
+    )
+
+
+def verify_oauth_state_token(token: str) -> bool:
+    """Verify a previously issued OAuth state token is valid and unexpired."""
+    try:
+        payload = jwt.decode(
+            token,
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
+        )
+        return payload.get("type") == "oauth_state"
+    except JWTError as exc:
+        logger.warning("OAuth state token verification failed: %s", exc)
+        return False
+
+
+def is_authorized_github_admin(github_username: str) -> bool:
+    """Check whether a GitHub username is on the configured admin allowlist."""
+    allowed = {
+        u.strip().lower()
+        for u in settings.github_admin_usernames.split(",")
+        if u.strip()
+    }
+    return github_username.strip().lower() in allowed
+
+
 def decode_token(token: str) -> dict[str, Any] | None:
     """Decode and validate a JWT token. Returns the payload or None if invalid."""
     try:

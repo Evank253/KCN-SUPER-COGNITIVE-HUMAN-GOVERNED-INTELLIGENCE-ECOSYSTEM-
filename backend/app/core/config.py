@@ -37,6 +37,17 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: list[str] = ["http://localhost:3000"]
 
+    # GitHub OAuth (admin sign-in)
+    github_client_id: str = ""
+    github_client_secret: str = ""
+    github_oauth_redirect_uri: str = "http://localhost:8000/api/v1/auth/github/callback"
+    # Comma-separated list of GitHub usernames allowed to sign in as admin
+    github_admin_usernames: str = "Evank253"
+    # Where to send the browser back to after a successful/failed OAuth login
+    frontend_url: str = "http://localhost:5173"
+    # Short-lived signed state token, protects the OAuth redirect from CSRF
+    oauth_state_expire_minutes: int = 10
+
     # Logging
     log_level: str = "INFO"
     log_format: str = "json"
