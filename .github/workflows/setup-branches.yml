@@ -67,24 +67,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
+          PAYLOAD='{"required_status_checks":{"strict":true,"contexts":[]},"enforce_admins":false,"required_pull_request_reviews":{"dismiss_stale_reviews":false,"require_code_owner_reviews":false,"required_approving_review_count":1},"restrictions":null}'
           gh api "repos/${REPO}/branches/main/protection" \
             --method PUT \
             --header "Accept: application/vnd.github+json" \
-            --input - <<'EOF'
-          {
-            "required_status_checks": {
-              "strict": true,
-              "contexts": []
-            },
-            "enforce_admins": false,
-            "required_pull_request_reviews": {
-              "dismiss_stale_reviews": false,
-              "require_code_owner_reviews": false,
-              "required_approving_review_count": 1
-            },
-            "restrictions": null
-          }
-          EOF
+            --input <(echo "$PAYLOAD")
           echo "Branch protection set on main"
 
       - name: Set branch protection — develop
@@ -92,24 +79,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
+          PAYLOAD='{"required_status_checks":{"strict":true,"contexts":[]},"enforce_admins":false,"required_pull_request_reviews":{"dismiss_stale_reviews":false,"require_code_owner_reviews":false,"required_approving_review_count":1},"restrictions":null}'
           gh api "repos/${REPO}/branches/develop/protection" \
             --method PUT \
             --header "Accept: application/vnd.github+json" \
-            --input - <<'EOF'
-          {
-            "required_status_checks": {
-              "strict": true,
-              "contexts": []
-            },
-            "enforce_admins": false,
-            "required_pull_request_reviews": {
-              "dismiss_stale_reviews": false,
-              "require_code_owner_reviews": false,
-              "required_approving_review_count": 1
-            },
-            "restrictions": null
-          }
-          EOF
+            --input <(echo "$PAYLOAD")
           echo "Branch protection set on develop"
 
       - name: Delete cleanup branches
