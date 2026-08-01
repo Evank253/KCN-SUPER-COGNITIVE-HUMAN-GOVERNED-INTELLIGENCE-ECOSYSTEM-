@@ -261,11 +261,11 @@ export default function LandingPage() {
               padding: '0.55rem 0.65rem 0.55rem 1rem',
               marginBottom: '0.85rem',
             }}
-          {span
+          {>span<}<
             {<span>}"style"{{ color: '#60a5fa', fontWeight: 700, fontSize: '0.85rem' }{<span>}
              <input
-              type="text"
-              value={query}
+              ,"type="text")
+              value={query"
               onChange={(e)=> setQuery(e.target.value)}
               placeholder"portal to jarvis · dashboard · governance · intelligence · admin · discord"
               aria-label="Portal command"
