@@ -2,21 +2,66 @@
 Application configuration — reads settings from environment variables.
 """
 
-from functools import lru_cache
-from typing import List
+from app.core.config import get_settings
 
+settings = get_settings()
+
+
+from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Application settings loaded from environment variables."""
-
     model_config = SettingsConfigDict(
-        env_file="../config/.env",
+        env_file=".env",
         env_file_encoding="utf-8",
-        case_sensitive=False,
-        extra="ignore",
+        extra="ignore"
     )
+
+    jwt_refresh_token_expire_days: int = 7
+
+    # CORS
+    cors_origins: list[str] = [
+        "http://localhost:3000"
+    ]
+
+    # Database
+    database_url: str = "sqlite+aiosqlite:///./kcn.db"
+
+    # Logging
+    log_level: str = "INFO"
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+
+    jwt_refresh_token_expire_days: int = 7
+
+    )
+
+    # CORS
+    cors_origins: list[str] = [
+        "http://localhost:3000"
+    ]
+
+    # Database
+    database_url: str = "sqlite+aiosqlite:///./kcn.db"
+
+    # Logging
+    log_level: str = "INFO"
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
 
     # Application
     app_name: str = "KCN-Ecosystem"
@@ -36,7 +81,10 @@ class Settings(BaseSettings):
     jwt_refresh_token_expire_days: int = 7
 
     # CORS
-    cors_origins: List[str] = ["http://localhost:3000"]
+    cors_origins: list[str] = ["http://localhost:3000"]
+
+    # Database
+    database_url: str = "sqlite+aiosqlite:///./kcn.db"
 
     # Logging
     log_level: str = "INFO"

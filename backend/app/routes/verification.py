@@ -3,7 +3,6 @@ Verification Core routes — retrieve verification results.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
@@ -22,7 +21,7 @@ class VerificationCheck(BaseModel):
 
     type: str
     passed: bool
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 class VerificationResult(BaseModel):
@@ -32,8 +31,8 @@ class VerificationResult(BaseModel):
     intelligence_result_id: str
     status: str
     confidence_score: float = Field(..., ge=0.0, le=1.0)
-    checks: List[VerificationCheck]
-    verified_at: Optional[str] = None
+    checks: list[VerificationCheck]
+    verified_at: str | None = None
 
 
 # ---------------------------------------------------------------------------

@@ -1,74 +1,115 @@
+
 """
 Security utilities — JWT token creation and validation.
 """
 
-import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
+from typing import Any
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-from app.core.config import settings
+from app.core.config import get_settings
 
-logger = logging.getLogger(__name__)
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+settings = get_settings()
+
+# Password hashing
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto"
+)
+
+# JWT configuration
+ALGORITHM = "HS256"
 
 
 def hash_password(password: str) -> str:
-    """Hash a plain-text password."""
+    """
+    Hash a user password before storing it.
+    """
     return pwd_context.hash(password)
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a plain-text password against a stored hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+def verify_password(
+    plain_password: str,
+    hashed_password: str
+) -> bool:
+    """
+    Verify a password against its stored hash.
+    """
+    return pwd_context.verify(
+        plain_password,
+        hashed_password
+    )
 
 
 def create_access_token(
-    subject: str, additional_claims: Optional[Dict[str, Any]] = None
+    subject: str | Any,
+    expires_delta: timedelta | None = None
 ) -> str:
-    """Create a signed JWT access token."""
-    expire = datetime.now(timezone.utc) + timedelta(
-        minutes=settings.jwt_access_token_expire_minutes
+    """
+    Create JWT access token.
+    """
+
+    expire = (
+        datetime.now(timezone.utc) + expires_delta
+        if expires_delta
+        else datetime.now(timezone.utc) + timedelta(minutes=30)
     )
-    payload: Dict[str, Any] = {
-        "sub": subject,
+
+    payload = {
+        "sub": str(subject),
         "exp": expire,
-        "type": "access",
+        "type": "access"
     }
-    if additional_claims:
-        payload.update(additional_claims)
+
     return jwt.encode(
-        payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
+        payload,
+        settings.secret_key,
+        algorithm=ALGORITHM
     )
 
 
-def create_refresh_token(subject: str) -> str:
-    """Create a signed JWT refresh token."""
+def create_refresh_token(
+    subject: str | Any
+) -> str:
+    """
+    Create long-lived refresh token.
+    """
+
     expire = datetime.now(timezone.utc) + timedelta(
         days=settings.jwt_refresh_token_expire_days
     )
-    payload: Dict[str, Any] = {
-        "sub": subject,
+
+    payload = {
+        "sub": str(subject),
         "exp": expire,
-        "type": "refresh",
+        "type": "refresh"
     }
+
     return jwt.encode(
-        payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
+        payload,
+        settings.secret_key,
+        algorithm=ALGORITHM
     )
 
 
-def decode_token(token: str) -> Optional[Dict[str, Any]]:
-    """Decode and validate a JWT token. Returns the payload or None if invalid."""
+def decode_token(token: str) -> dict:
+    """
+    Validate and decode JWT token.
+    """
+
     try:
         payload = jwt.decode(
             token,
-            settings.jwt_secret_key,
-            algorithms=[settings.jwt_algorithm],
+            settings.secret_key,
+            algorithms=[ALGORITHM]
         )
+
         return payload
+
     except JWTError as exc:
-        logger.warning("JWT decode error: %s", exc)
-        return None
+        raise ValueError(
+            "Invalid authentication token"
+        ) from exc
