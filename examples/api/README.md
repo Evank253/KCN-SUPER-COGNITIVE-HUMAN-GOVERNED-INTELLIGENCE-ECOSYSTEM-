@@ -30,11 +30,11 @@ curl -X POST http://localhost:8000/api/v1/auth/refresh \
 ```bash
 # List policies
 curl http://localhost:8000/api/v1/governance/policies \
-  -H "Authorization: ****** $TOKEN"
+  -H "Authorization: ******"
 
 # Submit approval request
 curl -X POST http://localhost:8000/api/v1/governance/approvals \
-  -H "Authorization: ****** $TOKEN" \
+  -H "Authorization: ******" \
   -H "Content-Type: application/json" \
   -d '{"action_type": "high_risk_operation", "description": "Deploy new model version"}'
 ```
@@ -44,7 +44,7 @@ curl -X POST http://localhost:8000/api/v1/governance/approvals \
 ```bash
 # Submit analysis
 curl -X POST http://localhost:8000/api/v1/intelligence/analyze \
-  -H "Authorization: ****** $TOKEN" \
+  -H "Authorization: ******" \
   -H "Content-Type: application/json" \
   -d '{"query": "Summarize best practices for secure API design", "module": "analysis"}'
 ```

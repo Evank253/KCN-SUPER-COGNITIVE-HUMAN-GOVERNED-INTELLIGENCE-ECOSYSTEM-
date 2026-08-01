@@ -15,14 +15,15 @@ vi.mock('../hooks/useHealth', () => ({
 }))
 
 describe('App', () => {
-  it('renders the dashboard on the root path', () => {
+  it('renders the dashboard heading on the root path', () => {
     render(<App />)
-    expect(screen.getByText('Dashboard')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
   })
 
   it('renders the navigation sidebar', () => {
     render(<App />)
-    expect(screen.getByText('Governance')).toBeInTheDocument()
-    expect(screen.getByText('Intelligence')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Intelligence Hub' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Governance' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Intelligence' })).toBeInTheDocument()
   })
 })
