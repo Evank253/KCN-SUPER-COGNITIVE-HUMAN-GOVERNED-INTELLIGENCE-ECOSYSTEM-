@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: write
-  administration: write
 
 jobs:
   setup-branches:
@@ -63,6 +62,7 @@ jobs:
           echo "Default branch set to main"
 
       - name: Set branch protection — main
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
@@ -75,6 +75,7 @@ jobs:
           echo "Branch protection set on main"
 
       - name: Set branch protection — develop
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
