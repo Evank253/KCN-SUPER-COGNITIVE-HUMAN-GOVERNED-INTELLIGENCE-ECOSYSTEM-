@@ -1,0 +1,147 @@
+name: Setup Repository Branches
+
+on:
+  push:
+    branches:
+      - "copilot/delete-copilot-change-default-branch-to-main"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  administration: write
+
+jobs:
+  setup-branches:
+    name: Create main/develop and set protections
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create main and develop branches from Phase 1 merge commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          # SHA of the Phase 1 merge commit (PR #1 merged into Python-3, then
+          # recorded on copilot/change-default-branch-to-main)
+          PHASE1_SHA: e311535ff96d5011ee2aa6352d20bc69bededbbb
+        run: |
+          set -euo pipefail
+
+          create_or_update_branch() {
+            local branch="$1"
+            local sha="$2"
+
+            existing=$(gh api "repos/${REPO}/branches/${branch}" \
+              --silent 2>&1 || true)
+
+            if echo "$existing" | grep -q '"name"'; then
+              echo "Branch '${branch}' already exists — skipping creation"
+            else
+              echo "Creating branch '${branch}' at ${sha}"
+              gh api "repos/${REPO}/git/refs" \
+                --method POST \
+                --field "ref=refs/heads/${branch}" \
+                --field "sha=${sha}"
+            fi
+          }
+
+          create_or_update_branch "main"    "$PHASE1_SHA"
+          create_or_update_branch "develop" "$PHASE1_SHA"
+
+      - name: Set main as default branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh api "repos/${REPO}" \
+            --method PATCH \
+            --field "default_branch=main"
+          echo "Default branch set to main"
+
+      - name: Set branch protection — main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh api "repos/${REPO}/branches/main/protection" \
+            --method PUT \
+            --header "Accept: application/vnd.github+json" \
+            --input - <<'EOF'
+          {
+            "required_status_checks": {
+              "strict": true,
+              "contexts": []
+            },
+            "enforce_admins": false,
+            "required_pull_request_reviews": {
+              "dismiss_stale_reviews": false,
+              "require_code_owner_reviews": false,
+              "required_approving_review_count": 1
+            },
+            "restrictions": null
+          }
+          EOF
+          echo "Branch protection set on main"
+
+      - name: Set branch protection — develop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh api "repos/${REPO}/branches/develop/protection" \
+            --method PUT \
+            --header "Accept: application/vnd.github+json" \
+            --input - <<'EOF'
+          {
+            "required_status_checks": {
+              "strict": true,
+              "contexts": []
+            },
+            "enforce_admins": false,
+            "required_pull_request_reviews": {
+              "dismiss_stale_reviews": false,
+              "require_code_owner_reviews": false,
+              "required_approving_review_count": 1
+            },
+            "restrictions": null
+          }
+          EOF
+          echo "Branch protection set on develop"
+
+      - name: Delete cleanup branches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          delete_branch_if_exists() {
+            local branch="$1"
+            response=$(gh api "repos/${REPO}/git/refs/heads/${branch}" \
+              --silent 2>&1 || true)
+            if echo "$response" | grep -q '"ref"'; then
+              echo "Deleting branch '${branch}'"
+              gh api "repos/${REPO}/git/refs/heads/${branch}" \
+                --method DELETE || echo "Warning: could not delete ${branch}"
+            else
+              echo "Branch '${branch}' not found — skipping"
+            fi
+          }
+
+          delete_branch_if_exists "copilot/change-default-branch-to-main"
+          delete_branch_if_exists "copilot/kcn-super-cognitive-ecosystem"
+          delete_branch_if_exists "copilot/delete-copilot-change-default-branch-to-main"
+
+      - name: Summary
+        run: |
+          echo "### ✅ Repository branch setup complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Branch | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| \`main\` | Created / already existed; set as default; branch protection enabled |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| \`develop\` | Created / already existed; branch protection enabled |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| \`copilot/change-default-branch-to-main\` | Deleted |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| \`copilot/kcn-super-cognitive-ecosystem\` | Deleted |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| \`copilot/delete-copilot-change-default-branch-to-main\` | Deleted (self-cleanup) |" >> "$GITHUB_STEP_SUMMARY"
