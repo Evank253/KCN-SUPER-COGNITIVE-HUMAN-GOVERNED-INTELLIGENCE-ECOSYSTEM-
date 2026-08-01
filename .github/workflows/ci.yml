@@ -15,8 +15,6 @@ jobs:
     name: Bootstrap main branch
     if: github.ref == 'refs/heads/copilot/delete-copilot-change-default-branch-to-main'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - name: Create main branch from Phase 1 merge commit
         env:
