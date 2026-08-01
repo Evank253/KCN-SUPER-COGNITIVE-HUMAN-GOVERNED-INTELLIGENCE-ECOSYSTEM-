@@ -4,8 +4,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?logo=discord&logoColor=white)](https://discord.gg/ZtYmsQRcR)
 
 > A modular, human-governed intelligence ecosystem where AI enhances human capability while humans maintain authority, accountability, and final decision-making control.
+
+**Public demo is free for 2 weeks · Admin access is always free**
+
+**Join the community:** [discord.gg/ZtYmsQRcR](https://discord.gg/ZtYmsQRcR)
 
 ---
 
@@ -76,6 +81,13 @@ docker compose up --build
 
 See [INSTALLATION.md](INSTALLATION.md) for detailed setup instructions.
 
+### Demo credentials (admin)
+
+- Username: `admin`
+- Password: `changeme`
+
+Admin area is always free. Change these credentials before any production use.
+
 ---
 
 ## Repository Structure
@@ -129,6 +141,14 @@ See [INSTALLATION.md](INSTALLATION.md) for detailed setup instructions.
 | [ROADMAP.md](ROADMAP.md)             | Development phases and milestones     |
 | [CHANGELOG.md](CHANGELOG.md)         | Version history                       |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards               |
+
+---
+
+## Community
+
+Join the Discord server to discuss the project, share ideas, and connect with other builders:
+
+**[https://discord.gg/ZtYmsQRcR](https://discord.gg/ZtYmsQRcR)**
 
 ---
 
