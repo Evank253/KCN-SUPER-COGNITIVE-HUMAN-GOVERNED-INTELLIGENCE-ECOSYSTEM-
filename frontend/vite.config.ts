@@ -4,11 +4,13 @@ import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [react()],
+
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
     },
   },
+
   server: {
     port: 3000,
     proxy: {
@@ -22,6 +24,7 @@ export default defineConfig({
       },
     },
   },
+
   test: {
     globals: true,
     environment: 'jsdom',
