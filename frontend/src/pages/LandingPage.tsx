@@ -1,239 +1,412 @@
-/** Public landing page — free demo hero + call-to-action. */
+/** Public landing — hyperspace WebGL + command chat portal jumps. */
 
-import { Link } from 'react-router-dom'
+import { FormEvent, useCallback, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import HyperspacePortal from '../components/HyperspacePortal'
 
 const DISCORD_INVITE = 'https://discord.gg/ZtYmsQRcR'
 
+const DESTINATIONS: Record<string, { path?: string; external?: string; label: string }> = {
+  dashboard: { path: '/dashboard', label: 'Dashboard' },
+  demo: { path: '/dashboard', label: 'Public Demo' },
+  governance: { path: '/governance', label: 'Governance' },
+  intelligence: { path: '/intelligence', label: 'Intelligence' },
+  admin: { path: '/login', label: 'Admin Login' },
+  login: { path: '/login', label: 'Admin Login' },
+  discord: { external: DISCORD_INVITE, label: 'Discord' },
+  community: { external: DISCORD_INVITE, label: 'Discord' },
+  home: { path: '/', label: 'Home' },
+}
+
+function resolveDestination(input: string) {
+  const q = input.trim().toLowerCase()
+  if (!q) return null
+  for (const [key, dest] of Object.entries(DESTINATIONS)) {
+    if (q === key || q.includes(key)) return dest
+  }
+  // free-text fallbacks
+  if (/gov|policy|rule/.test(q)) return DESTINATIONS.governance
+  if (/intel|ai|reason|research/.test(q)) return DESTINATIONS.intelligence
+  if (/admin|login|operator/.test(q)) return DESTINATIONS.admin
+  if (/discord|chat|community/.test(q)) return DESTINATIONS.discord
+  if (/demo|try|start|dash/.test(q)) return DESTINATIONS.dashboard
+  return DESTINATIONS.dashboard
+}
+
 export default function LandingPage() {
+  const navigate = useNavigate()
+  const [warp, setWarp] = useState(0)
+  const [bootDone, setBootDone] = useState(false)
+  const [query, setQuery] = useState('')
+  const [status, setStatus] = useState('Systems initializing…')
+  const [intensity, setIntensity] = useState(0.55)
+
+  // Boot sequence copy
+  useState(() => {
+    const t1 = window.setTimeout(() => setStatus('Neural lattice online'), 900)
+    const t2 = window.setTimeout(() => setStatus('Governance layer linked'), 1600)
+    const t3 = window.setTimeout(() => {
+      setStatus('Ready — type a destination or click below')
+      setBootDone(true)
+      setIntensity(0.35)
+    }, 2500)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(t3)
+    }
+  })
+
+  const portalTo = useCallback(
+    (dest: { path?: string; external?: string; label: string }) => {
+      setWarp((w) => w + 1)
+      setIntensity(0.95)
+      setStatus(`Opening portal → ${dest.label}`)
+      window.setTimeout(() => {
+        if (dest.external) {
+          window.open(dest.external, '_blank', 'noopener,noreferrer')
+          setIntensity(0.35)
+          setStatus('Portal standby — enter next command')
+        } else if (dest.path) {
+          navigate(dest.path)
+        }
+      }, 900)
+    },
+    [navigate],
+  )
+
+  function handleCommand(e: FormEvent) {
+    e.preventDefault()
+    const dest = resolveDestination(query)
+    if (!dest) return
+    setQuery('')
+    portalTo(dest)
+  }
+
+  const glass: React.CSSProperties = {
+    background: 'rgba(8, 12, 28, 0.72)',
+    backdropFilter: 'blur(14px)',
+    WebkitBackdropFilter: 'blur(14px)',
+    border: '1px solid rgba(120, 160, 255, 0.22)',
+    borderRadius: '12px',
+    boxShadow: '0 0 40px rgba(30, 80, 255, 0.15)',
+  }
+
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--color-neutral-50)' }}>
-      {/* Top nav */}
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '1rem 2rem',
-          background: '#fff',
-          borderBottom: '1px solid var(--color-neutral-200)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span
-            style={{
-              fontWeight: 700,
-              fontSize: '1.125rem',
-              color: 'var(--color-primary)',
-            }}
-          >
-            KCN Ecosystem
-          </span>
-          <span
-            style={{
-              fontSize: '0.75rem',
-              background: 'var(--color-success)',
-              color: '#fff',
-              padding: '0.15rem 0.5rem',
-              borderRadius: '999px',
-              fontWeight: 600,
-            }}
-          >
-            Free Demo
-          </span>
-        </div>
-        <nav style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <Link to="/dashboard" style={{ fontWeight: 500 }}>
-            Try Demo
-          </Link>
-          <a
-            href={DISCORD_INVITE}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ fontWeight: 500 }}
-          >
-            Discord
-          </a>
-          <Link
-            to="/login"
-            style={{
-              background: 'var(--color-primary)',
-              color: '#fff',
-              padding: '0.4rem 1rem',
-              borderRadius: 'var(--radius)',
-              fontWeight: 600,
-              textDecoration: 'none',
-            }}
-          >
-            Admin Login
-          </Link>
-        </nav>
-      </header>
+    <div
+      style={{
+        minHeight: '100vh',
+        position: 'relative',
+        overflow: 'hidden',
+        background: '#02040c',
+        color: '#e8eefc',
+        fontFamily: "var(--font-sans)",
+      }}
+    >
+      {/* Full-viewport WebGL hyperspace */}
+      <HyperspacePortal intensity={intensity} warpTrigger={warp} />
 
-      {/* Hero */}
-      <section
+      {/* Soft gradient overlay for readability */}
+      <div
         style={{
-          maxWidth: 900,
-          margin: '0 auto',
-          padding: '4rem 1.5rem 3rem',
-          textAlign: 'center',
+          position: 'absolute',
+          inset: 0,
+          background:
+            'radial-gradient(ellipse at center, transparent 0%, rgba(2,4,12,0.55) 70%, rgba(2,4,12,0.85) 100%)',
+          pointerEvents: 'none',
+          zIndex: 1,
         }}
-      >
-        <p
-          style={{
-            fontSize: '0.875rem',
-            fontWeight: 600,
-            color: 'var(--color-primary)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-            marginBottom: '0.75rem',
-          }}
-        >
-          Human-Governed Intelligence
-        </p>
-        <h1
-          style={{
-            fontSize: 'clamp(1.75rem, 5vw, 2.75rem)',
-            fontWeight: 800,
-            lineHeight: 1.2,
-            marginBottom: '1.25rem',
-            color: 'var(--color-neutral-900)',
-          }}
-        >
-          KCN Super Cognitive Human Governed Intelligence Ecosystem
-        </h1>
-        <p
-          style={{
-            fontSize: '1.125rem',
-            color: '#4b5563',
-            maxWidth: 640,
-            margin: '0 auto 2rem',
-            lineHeight: 1.6,
-          }}
-        >
-          A modular platform where AI enhances human capability while humans
-          keep authority, accountability, and final decision-making control.
-          Built to expand human potential with trust, transparency, and
-          governance at the core.
-        </p>
+      />
 
-        <div
+      {/* Content layer */}
+      <div style={{ position: 'relative', zIndex: 2, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        {/* Nav */}
+        <header
           style={{
             display: 'flex',
-            flexWrap: 'wrap',
-            gap: '1rem',
-            justifyContent: 'center',
-            marginBottom: '1.5rem',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '1rem 1.75rem',
+            borderBottom: '1px solid rgba(120,160,255,0.12)',
           }}
         >
-          <Link
-            to="/dashboard"
-            style={{
-              background: 'var(--color-primary)',
-              color: '#fff',
-              padding: '0.75rem 1.75rem',
-              borderRadius: 'var(--radius)',
-              fontWeight: 700,
-              fontSize: '1rem',
-              textDecoration: 'none',
-              boxShadow: 'var(--shadow)',
-            }}
-          >
-            Explore Free Public Demo
-          </Link>
-          <a
-            href={DISCORD_INVITE}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              background: '#5865F2',
-              color: '#fff',
-              padding: '0.75rem 1.75rem',
-              borderRadius: 'var(--radius)',
-              fontWeight: 700,
-              fontSize: '1rem',
-              textDecoration: 'none',
-              boxShadow: 'var(--shadow)',
-            }}
-          >
-            Join Discord Community
-          </a>
-        </div>
-
-        <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-          Public demo is free for 2 weeks · Admin access is always free
-        </p>
-      </section>
-
-      {/* Feature cards */}
-      <section
-        style={{
-          maxWidth: 1000,
-          margin: '0 auto',
-          padding: '0 1.5rem 4rem',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '1.25rem',
-        }}
-      >
-        {[
-          {
-            title: 'Human Governance',
-            desc: 'Rules, oversight, and final authority stay with people.',
-          },
-          {
-            title: 'Intelligence Core',
-            desc: 'Research, reasoning, planning, and analysis modules.',
-          },
-          {
-            title: 'Verification & Trust',
-            desc: 'Evidence checks, fact-checking, and reliability gates.',
-          },
-          {
-            title: 'Security First',
-            desc: 'Identity, auth, encryption, and continuous monitoring.',
-          },
-        ].map(({ title, desc }) => (
-          <div
-            key={title}
-            style={{
-              background: '#fff',
-              borderRadius: 'var(--radius)',
-              boxShadow: 'var(--shadow)',
-              padding: '1.5rem',
-              borderTop: '3px solid var(--color-primary)',
-            }}
-          >
-            <h3 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>{title}</h3>
-            <p style={{ fontSize: '0.9rem', color: '#4b5563' }}>{desc}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span
+              style={{
+                fontWeight: 800,
+                letterSpacing: '0.04em',
+                background: 'linear-gradient(90deg,#7dd3fc,#a78bfa,#60a5fa)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              KCN ECOSYSTEM
+            </span>
+            <span
+              style={{
+                fontSize: '0.7rem',
+                background: 'rgba(16,185,129,0.25)',
+                color: '#6ee7b7',
+                border: '1px solid rgba(16,185,129,0.4)',
+                padding: '0.15rem 0.55rem',
+                borderRadius: '999px',
+                fontWeight: 600,
+              }}
+            >
+              FREE DEMO
+            </span>
           </div>
-        ))}
-      </section>
+          <nav style={{ display: 'flex', gap: '0.85rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => portalTo(DESTINATIONS.dashboard)}
+              style={navBtn}
+            >
+              Demo
+            </button>
+            <button type="button" onClick={() => portalTo(DESTINATIONS.discord)} style={navBtn}>
+              Discord
+            </button>
+            <button
+              type="button"
+              onClick={() => portalTo(DESTINATIONS.admin)}
+              style={{ ...navBtn, background: 'rgba(59,130,246,0.35)', borderColor: 'rgba(96,165,250,0.5)' }}
+            >
+              Admin
+            </button>
+          </nav>
+        </header>
 
-      {/* Footer */}
-      <footer
-        style={{
-          textAlign: 'center',
-          padding: '2rem',
-          borderTop: '1px solid var(--color-neutral-200)',
-          color: '#6b7280',
-          fontSize: '0.875rem',
-        }}
-      >
-        <p>
-          Built by Evan Ketchum · Open source ·{' '}
+        {/* Hero */}
+        <section
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2.5rem 1.25rem 2rem',
+            textAlign: 'center',
+          }}
+        >
+          <p
+            style={{
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: '#7dd3fc',
+              marginBottom: '0.85rem',
+              opacity: bootDone ? 1 : 0.6,
+              transition: 'opacity 0.6s',
+            }}
+          >
+            Human-Governed Intelligence · Live Systems
+          </p>
+
+          <h1
+            style={{
+              fontSize: 'clamp(1.6rem, 4.5vw, 2.85rem)',
+              fontWeight: 800,
+              lineHeight: 1.15,
+              maxWidth: 820,
+              marginBottom: '1rem',
+              textShadow: '0 0 40px rgba(80,120,255,0.45)',
+            }}
+          >
+            KCN Super Cognitive Human Governed Intelligence Ecosystem
+          </h1>
+
+          <p
+            style={{
+              fontSize: '1.05rem',
+              color: 'rgba(200,210,240,0.82)',
+              maxWidth: 580,
+              margin: '0 auto 1.75rem',
+              lineHeight: 1.55,
+            }}
+          >
+            AI amplifies human capability. Humans keep authority. Type a command
+            or hit a node — the portal opens.
+          </p>
+
+          {/* Command / chat bar */}
+          <form
+            onSubmit={handleCommand}
+            style={{
+              ...glass,
+              width: '100%',
+              maxWidth: 520,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.55rem 0.65rem 0.55rem 1rem',
+              marginBottom: '0.85rem',
+            }}
+          >
+            <span style={{ color: '#60a5fa', fontWeight: 700, fontSize: '0.85rem' }}>></span>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="portal to dashboard · governance · intelligence · admin · discord"
+              aria-label="Portal command"
+              style={{
+                flex: 1,
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                color: '#e8eefc',
+                fontSize: '0.95rem',
+                fontFamily: 'inherit',
+              }}
+            />
+            <button
+              type="submit"
+              style={{
+                background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0.5rem 1rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+              }}
+            >
+              Engage
+            </button>
+          </form>
+
+          <p
+            style={{
+              fontSize: '0.8rem',
+              color: '#93c5fd',
+              marginBottom: '1.75rem',
+              minHeight: '1.2em',
+              letterSpacing: '0.02em',
+            }}
+          >
+            {status}
+          </p>
+
+          {/* Quick nodes */}
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '0.75rem',
+              justifyContent: 'center',
+              marginBottom: '1.25rem',
+            }}
+          >
+            {(
+              [
+                ['dashboard', 'Public Demo'],
+                ['governance', 'Governance'],
+                ['intelligence', 'Intelligence'],
+                ['admin', 'Admin'],
+                ['discord', 'Discord'],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => portalTo(DESTINATIONS[key])}
+                style={{
+                  ...glass,
+                  padding: '0.65rem 1.2rem',
+                  color: '#e0e7ff',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  transition: 'transform 0.15s, box-shadow 0.15s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 0 28px rgba(80,140,255,0.35)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'none'
+                  e.currentTarget.style.boxShadow = glass.boxShadow as string
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <p style={{ fontSize: '0.8rem', color: 'rgba(148,163,184,0.9)' }}>
+            Public demo free 2 weeks · Admin always free
+          </p>
+        </section>
+
+        {/* Module strip */}
+        <section
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '0.85rem',
+            padding: '0 1.25rem 2.5rem',
+            maxWidth: 1000,
+            margin: '0 auto',
+            width: '100%',
+          }}
+        >
+          {[
+            { t: 'Governance', d: 'Human authority & policy control' },
+            { t: 'Intelligence', d: 'Research · reason · plan · create' },
+            { t: 'Verification', d: 'Evidence · truth · reliability' },
+            { t: 'Security', d: 'Identity · encryption · monitoring' },
+          ].map(({ t, d }) => (
+            <div key={t} style={{ ...glass, padding: '1.1rem 1.2rem' }}>
+              <h3 style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.35rem', color: '#bfdbfe' }}>
+                {t}
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: 'rgba(180,190,220,0.75)' }}>{d}</p>
+            </div>
+          ))}
+        </section>
+
+        <footer
+          style={{
+            textAlign: 'center',
+            padding: '1.25rem',
+            borderTop: '1px solid rgba(120,160,255,0.1)',
+            fontSize: '0.8rem',
+            color: 'rgba(148,163,184,0.85)',
+          }}
+        >
+          Built by Evan Ketchum ·{' '}
           <a
             href="https://github.com/Evank253/KCN-SUPER-COGNITIVE-HUMAN-GOVERNED-INTELLIGENCE-ECOSYSTEM-"
             target="_blank"
             rel="noopener noreferrer"
+            style={{ color: '#93c5fd' }}
           >
             GitHub
           </a>{' '}
           ·{' '}
-          <a href={DISCORD_INVITE} target="_blank" rel="noopener noreferrer">
+          <Link to="/dashboard" style={{ color: '#93c5fd' }}>
+            Demo
+          </Link>{' '}
+          ·{' '}
+          <a href={DISCORD_INVITE} target="_blank" rel="noopener noreferrer" style={{ color: '#93c5fd' }}>
             Discord
           </a>
-        </p>
-      </footer>
+        </footer>
+      </div>
     </div>
   )
+}
+
+const navBtn: React.CSSProperties = {
+  background: 'rgba(15, 23, 42, 0.5)',
+  border: '1px solid rgba(120,160,255,0.25)',
+  color: '#e2e8f0',
+  padding: '0.35rem 0.85rem',
+  borderRadius: '8px',
+  fontWeight: 600,
+  fontSize: '0.85rem',
+  cursor: 'pointer',
 }
