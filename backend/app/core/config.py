@@ -3,7 +3,6 @@ Application configuration — reads settings from environment variables.
 """
 
 from functools import lru_cache
-from typing import List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -36,7 +35,7 @@ class Settings(BaseSettings):
     jwt_refresh_token_expire_days: int = 7
 
     # CORS
-    cors_origins: List[str] = ["http://localhost:3000"]
+    cors_origins: list[str] = ["http://localhost:3000"]
 
     # Logging
     log_level: str = "INFO"

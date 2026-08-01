@@ -5,9 +5,8 @@ Governance routes — policies and human approval workflows.
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, status
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -33,7 +32,7 @@ class Policy(BaseModel):
 class PolicyListResponse(BaseModel):
     """Paginated list of governance policies."""
 
-    policies: List[Policy]
+    policies: list[Policy]
     total: int
 
 
@@ -42,7 +41,7 @@ class ApprovalRequest(BaseModel):
 
     action_type: str = Field(..., min_length=1, max_length=128)
     description: str = Field(..., min_length=1, max_length=1024)
-    data: Optional[dict] = None
+    data: dict | None = None
 
 
 class ApprovalResponse(BaseModel):
