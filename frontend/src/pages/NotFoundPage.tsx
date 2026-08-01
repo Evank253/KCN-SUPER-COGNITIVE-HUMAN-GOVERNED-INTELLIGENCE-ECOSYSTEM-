@@ -9,19 +9,34 @@ export default function NotFoundPage() {
       <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
         The page you are looking for does not exist.
       </p>
-      <Link
-        to="/"
-        style={{
-          background: 'var(--color-primary)',
-          color: '#fff',
-          padding: '0.5rem 1.25rem',
-          borderRadius: 'var(--radius)',
-          fontWeight: 600,
-          textDecoration: 'none',
-        }}
-      >
-        Return to Dashboard
-      </Link>
+      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <Link
+          to="/"
+          style={{
+            background: 'var(--color-primary)',
+            color: '#fff',
+            padding: '0.5rem 1.25rem',
+            borderRadius: 'var(--radius)',
+            fontWeight: 600,
+            textDecoration: 'none',
+          }}
+        >
+          Home
+        </Link>
+        <Link
+          to="/dashboard"
+          style={{
+            border: '1px solid var(--color-primary)',
+            color: 'var(--color-primary)',
+            padding: '0.5rem 1.25rem',
+            borderRadius: 'var(--radius)',
+            fontWeight: 600,
+            textDecoration: 'none',
+          }}
+        >
+          Public Demo
+        </Link>
+      </div>
     </div>
   )
 }
