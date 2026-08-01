@@ -261,8 +261,8 @@ export default function LandingPage() {
               padding: '0.55rem 0.65rem 0.55rem 1rem',
               marginBottom: '0.85rem',
             }}
-          >
-            <span style={{ color: '#60a5fa', fontWeight: 700, fontSize: '0.85rem' }}>></span>
+          {span</
+            {<span>}"style"{{ color: '#60a5fa', fontWeight: 700, fontSize: '0.85rem' }{<span>}
             <input
               type="text"
               value={query}
@@ -278,9 +278,8 @@ export default function LandingPage() {
                 fontSize: '0.95rem',
                 fontFamily: 'inherit',
               }}
-            />
-            <button
-              type="submit"
+           
+           <button type>="submit"
               style={{
                 background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)',
                 color: '#fff',
@@ -316,7 +315,6 @@ export default function LandingPage() {
               justifyContent: 'center',
               marginBottom: '1.25rem',
             }}
-          >
             {(
               [
                 ['jarvis', 'Jarvis · Vibe'],
@@ -327,7 +325,7 @@ export default function LandingPage() {
                 ['discord', 'Discord'],
               ] as const
             ).map(([key, label]) => (
-              <button
+              <button type>
                 key={key}
                 type="button"
                 onClick={() => portalTo(DESTINATIONS[key])}
