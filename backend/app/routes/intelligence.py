@@ -5,7 +5,7 @@ Intelligence Core routes — analysis and reasoning requests.
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Literal
 
 from fastapi import APIRouter, status
 from pydantic import BaseModel, Field
@@ -27,7 +27,7 @@ class AnalysisRequest(BaseModel):
     """Request body for the Intelligence Core."""
 
     query: str = Field(..., min_length=1, max_length=4096)
-    context: Optional[Dict[str, Any]] = None
+    context: dict[str, Any] | None = None
     module: IntelligenceModule = "analysis"
 
 
@@ -37,7 +37,7 @@ class AnalysisResponse(BaseModel):
     id: str
     module: str
     status: str
-    result: Optional[Dict[str, Any]]
+    result: dict[str, Any] | None
     created_at: str
 
 

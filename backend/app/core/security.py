@@ -4,7 +4,7 @@ Security utilities — JWT token creation and validation.
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
+from typing import Any
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -27,13 +27,13 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(
-    subject: str, additional_claims: Optional[Dict[str, Any]] = None
+    subject: str, additional_claims: dict[str, Any] | None = None
 ) -> str:
     """Create a signed JWT access token."""
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.jwt_access_token_expire_minutes
     )
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "sub": subject,
         "exp": expire,
         "type": "access",
@@ -50,7 +50,7 @@ def create_refresh_token(subject: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         days=settings.jwt_refresh_token_expire_days
     )
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "sub": subject,
         "exp": expire,
         "type": "refresh",
@@ -60,7 +60,7 @@ def create_refresh_token(subject: str) -> str:
     )
 
 
-def decode_token(token: str) -> Optional[Dict[str, Any]]:
+def decode_token(token: str) -> dict[str, Any] | None:
     """Decode and validate a JWT token. Returns the payload or None if invalid."""
     try:
         payload = jwt.decode(
