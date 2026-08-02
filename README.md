@@ -8,7 +8,7 @@
 
 > A modular, human-governed intelligence ecosystem where AI enhances human capability while humans maintain authority, accountability, and final decision-making control.
 
-**Public demo is free for 2 weeks · Admin access is always free**
+**Public demo is free for 2 weeks ·
 
 **Join the community:** [discord.gg/ZtYmsQRcR](https://discord.gg/ZtYmsQRcR)
 
