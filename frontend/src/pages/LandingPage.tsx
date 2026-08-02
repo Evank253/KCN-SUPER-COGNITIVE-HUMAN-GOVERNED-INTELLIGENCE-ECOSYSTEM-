@@ -1,5 +1,5 @@
 /** Public landing — hyperspace WebGL + command chat portal jumps. */
-
+npm run lint
 import { FormEvent, useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import HyperspacePortal from '../components/HyperspacePortal'
