@@ -1,6 +1,18 @@
 name: Deploy public demo to GitHub Pages
 
-on:
+on:// Octokit.js
+// https://github.com/octokit/core.js#readme
+const octokit = new Octokit({
+  auth: 'YOUR-TOKEN'
+})
+
+await octokit.request('GET /repos/{owner}/{repo}/pages', {
+  owner: 'OWNER',
+  repo: 'REPO',
+  headers: {
+    'X-GitHub-Api-Version': '2026-03-10'
+  }
+})
   push:
     branches: ["copilot/kcn-super-cognitive-ecosystem", main, develop]
   workflow_dispatch:
