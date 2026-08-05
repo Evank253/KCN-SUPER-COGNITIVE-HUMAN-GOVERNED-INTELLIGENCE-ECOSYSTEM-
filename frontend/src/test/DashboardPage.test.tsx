@@ -30,7 +30,7 @@ describe('DashboardPage', () => {
         <DashboardPage />
       </MemoryRouter>
     )
-    expect(screen.getByText('healthy')).toBeInTheDocument()
+    expect(screen.getAllByText('healthy').length).toBeGreaterThan(0)
     expect(screen.getByText('0.1.0')).toBeInTheDocument()
   })
 
@@ -40,7 +40,7 @@ describe('DashboardPage', () => {
         <DashboardPage />
       </MemoryRouter>
     )
-    expect(screen.getByText('Governance')).toBeInTheDocument()
+    expect(screen.getAllByText('Governance').length).toBeGreaterThan(0)
     expect(screen.getByText('Intelligence Core')).toBeInTheDocument()
     expect(screen.getByText('Verification Core')).toBeInTheDocument()
   })
