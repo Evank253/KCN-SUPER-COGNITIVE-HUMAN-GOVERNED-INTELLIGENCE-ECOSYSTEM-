@@ -58,6 +58,8 @@ FastAPI is not on Vercel by default. Options:
 
 Then set `VITE_API_BASE_URL` to that API origin and redeploy.
 
+If `npm ci` fails because `frontend/package-lock.json` is out of sync, refresh it locally with `cd frontend && npm install`, commit the updated lockfile, and retry the deploy.
+
 ## CLI alternative
 
 ```bash

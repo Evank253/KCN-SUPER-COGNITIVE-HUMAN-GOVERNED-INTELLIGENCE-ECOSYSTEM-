@@ -8,7 +8,7 @@ This document describes how to deploy the KCN Super Cognitive Human Governed Int
 
 | Environment | Branch | Purpose |
 |---|---|---|
-| Development | `feature/*` | Local developer testing |
+| Development | `feature/*`, `copilot/*` | Local developer testing and agent-driven work |
 | Staging | `develop` | Integration testing |
 | Production | `main` | Live system |
 
@@ -80,13 +80,16 @@ docker compose logs -f
 
 The repository includes a GitHub Actions workflow at `.github/workflows/ci.yml` that:
 
-1. Runs on every push and pull request to `main`
+1. Runs on pushes to `main`, `develop`, and the active `copilot/*` working branch, plus pull requests targeting `main` or `develop`
 2. Lints backend Python code (Ruff)
-3. Type-checks backend Python code (mypy)
+3. Installs backend runtime and dev test dependencies
 4. Runs backend unit tests (Pytest)
 5. Lints frontend TypeScript code (ESLint)
 6. Runs frontend unit tests (Vitest)
-7. Builds Docker images to verify build integrity
+7. Builds the frontend production bundle
+8. Builds Docker images to verify build integrity
+
+The repository also includes `.github/workflows/pages.yml`, which deploys the static `public-demo/` site to GitHub Pages for branch-based demo publishing.
 
 ### Extending CI/CD for Deployment
 
