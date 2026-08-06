@@ -51,12 +51,14 @@ LOG_FORMAT=json
 
 ## Vercel Deployment (Frontend)
 
-The frontend can be deployed to Vercel directly from the command line using the Vercel CLI, which is included as a dev dependency.
+The frontend is deployed from the repository root. The root `vercel.json` is the single source of truth for Vercel, while the actual Vite app remains in `frontend/`.
+
+The Vercel CLI is included as a root dev dependency so deployments can be triggered from the monorepo root.
 
 ### Setup
 
 ```bash
-# Install dependencies (includes Vercel CLI)
+# Install root deployment tooling (includes Vercel CLI)
 npm install
 
 # Log in to Vercel (one-time setup)
@@ -85,11 +87,12 @@ npx vercel --prod   # production deployment
 The `vercel.json` file at the repository root configures the deployment:
 
 - **Framework**: Vite
-- **Install command**: `cd frontend && npm install --legacy-peer-deps`
-- **Build command**: `cd frontend && npm run build`
+- **Install command**: `npm --prefix frontend install --legacy-peer-deps`
+- **Build command**: `npm --prefix frontend run build`
 - **Output directory**: `frontend/dist`
 - **Rewrites**: All routes fall back to `index.html` for SPA routing
 - **Security headers**: `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`
+- **Project root**: repository root (do not add a competing `frontend/vercel.json`)
 
 ### Environment Variables
 
@@ -101,8 +104,9 @@ npx vercel env add VITE_API_URL
 
 ### Troubleshooting
 
-- If the build fails due to a lockfile mismatch, run `npm install` inside `frontend/` to regenerate `frontend/package-lock.json`, then re-deploy.
-- Ensure Node.js ≥ 20 is selected in Vercel project settings to match the `engines` field in `package.json`.
+- If the build fails due to a frontend lockfile mismatch, run `npm install --legacy-peer-deps` inside `frontend/` to regenerate `frontend/package-lock.json`, then re-deploy.
+- If the root Vercel CLI install drifts, run `npm install` at the repository root to refresh the root `package-lock.json`.
+- Ensure Node.js ≥ 20.19.0 is selected in Vercel project settings to match the `engines` field in the root `package.json`.
 
 ---
 

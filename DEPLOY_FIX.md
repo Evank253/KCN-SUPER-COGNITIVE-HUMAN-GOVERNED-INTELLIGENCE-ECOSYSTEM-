@@ -3,7 +3,7 @@
 ## Root causes
 
 1. **Vercel `npm ci`** often fails when lockfile and `package.json` drift. Fixed: use `npm install --legacy-peer-deps`.
-2. **Wrong Root Directory** on Vercel — project is a monorepo; app lives in `frontend/`. Root `vercel.json` already `cd frontend`.
+2. **Wrong Root Directory** on Vercel — project is a monorepo; app lives in `frontend/`. The root `vercel.json` is the single source of truth and already targets `frontend/`.
 3. **Wrong branch** — code is on `copilot/kcn-super-cognitive-ecosystem` (and `develop`). Point Vercel Production Branch at that branch.
 4. **Backend ≠ Vercel** — FastAPI backend needs **Render** (see `render.yaml`), not Vercel static hosting.
 

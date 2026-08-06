@@ -11,7 +11,7 @@
     "deploy:preview": "vercel"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20.19.0"
   },
   "devDependencies": {
     "vercel": "^58.7.0"
