@@ -13,17 +13,13 @@ Public demo (landing, Jarvis, dashboard) as a static Vite app.
 | Setting | Value |
 |---------|--------|
 | Framework Preset | Vite |
-| Root Directory | leave blank (repo root) **or** set to `frontend` |
-| Build Command | `cd frontend && npm run build` (if Root = repo root) |
-| Output Directory | `frontend/dist` (if Root = repo root) |
-| Install Command | `cd frontend && npm ci` (if Root = repo root) |
+| Root Directory | leave blank (repo root) |
+| Build Command | `npm --prefix frontend run build` |
+| Output Directory | `frontend/dist` |
+| Install Command | `npm --prefix frontend install --legacy-peer-deps` |
 | Production Branch | `copilot/kcn-super-cognitive-ecosystem` (or merge to `main`) |
 
-If you set **Root Directory** to `frontend`, use:
-
-- Build: `npm run build`
-- Output: `dist`
-- Install: `npm ci`
+The root `vercel.json` is the authoritative Vercel configuration. Keep deployment tooling at the repository root and the app source in `frontend/`.
 
 ## 3. Environment variables (optional for frontend-only)
 
@@ -43,7 +39,7 @@ Share that for the 2-week free public demo.
 
 ## 5. SPA routing
 
-`vercel.json` rewrites all paths to `index.html` so `/jarvis`, `/dashboard`, etc. work on refresh.
+The root `vercel.json` rewrites all paths to `index.html` so `/jarvis`, `/dashboard`, etc. work on refresh.
 
 ## 6. Custom domain (optional)
 
@@ -62,7 +58,7 @@ Then set `VITE_API_BASE_URL` to that API origin and redeploy.
 
 ```bash
 npm i -g vercel
-cd frontend   # or repo root with vercel.json
+cd /path/to/repo
 vercel login
 vercel --prod
 ```
