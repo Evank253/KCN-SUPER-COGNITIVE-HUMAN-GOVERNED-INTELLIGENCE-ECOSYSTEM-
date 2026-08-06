@@ -58,7 +58,7 @@ Then set `VITE_API_BASE_URL` to that API origin and redeploy.
 
 ```bash
 npm i -g vercel
-cd /path/to/KCN-SUPER-COGNITIVE-HUMAN-GOVERNED-INTELLIGENCE-ECOSYSTEM-
+cd /path/to/repo
 vercel login
 vercel --prod
 ```
