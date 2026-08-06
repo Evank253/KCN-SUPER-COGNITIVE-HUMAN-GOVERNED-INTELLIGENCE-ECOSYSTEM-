@@ -19,9 +19,15 @@ on:
   schedule:
     - cron: '28 22 * * 1'
 
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
+    timeout-minutes: 60
     # Runner size impacts CodeQL analysis time. To learn more, please see:
     #   - https://gh.io/recommended-hardware-resources-for-running-codeql
     #   - https://gh.io/supported-runners-and-hardware-resources
