@@ -1,42 +1,65 @@
 name: Deploy public demo to GitHub Pages
 
-on:// Octokit.js
-// https://github.com/octokit/core.js#readme
-const octokit = new Octokit({
-  auth: 'YOUR-TOKEN'
-})
-
-await octokit.request('GET /repos/{owner}/{repo}/pages', {
-  owner: 'OWNER',
-  repo: 'REPO',
-  headers: {
-    'X-GitHub-Api-Version': '2026-03-10'
-  }
-})
+on: 
   push:
-    branches: ["copilot/kcn-super-cognitive-ecosystem", main, develop]
-  workflow_dispatch:
+  branches: ["copilot/kcn-super-cognitive-ecosystems", "main", "develop"]
+    workflow_dispatch:
+   
+    permissions:
+  backend/app/routes/auth.py
+ 
+  @@ -13,8 +13,8 @@
+ 
+  from app.core.config import settings
+  from app.core.security import (
+  create_access_token,
+  create_oauth_state_token,
+  create_refresh_token,
+  decode_token,
+  is_authorized_github_admin,
+  verify_oauth_state_token,
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
 
-concurrency:
-  group: pages
-  cancel-in-progress: true
 
-jobs:
+
+
+  backend/requirements-dev.txt
+  @@ -1,4 +1,3 @@
+  pytest==8.3.3
+  pytest-asyncio==0.23.7
+  httpx==0.27.0
+
+
+
+
+
+  frontend/src/vite-env.d.TypeScript
+  interface SpeechRecognitionAlternative {
+  confidence:number
+  }
+  
+  +declare const SpeechRecognition: {
+    prototype: SpeechRecognition
+    new (): SpeechRecognition
+  }
+
+
+
+...+23,9 @@ export default defineConfig {(
+  },
+ },
+},
++ test:{
++   environment: 'jsdom',
++   globals: true,
++   setupfiles: './src/test/setup.ts',
++ },
+ })
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: public-demo
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload public demo artifact
+        uses: actions/upload-pages-artifact@v3
