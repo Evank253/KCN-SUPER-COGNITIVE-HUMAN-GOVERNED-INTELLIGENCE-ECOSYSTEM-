@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 import MainLayout from './layouts/MainLayout'
 import ProtectedRoute from './components/ProtectedRoute'
 import LandingPage from './pages/LandingPage'
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
+      <SpeedInsights />
     </BrowserRouter>
   )
 }
