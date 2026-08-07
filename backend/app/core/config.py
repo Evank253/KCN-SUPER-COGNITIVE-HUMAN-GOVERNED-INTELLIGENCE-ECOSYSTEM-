@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     # Short-lived signed state token, protects the OAuth redirect from CSRF
     oauth_state_expire_minutes: int = 10
 
+    # Optional upstream frontier LLM (OpenAI-compatible: Moonshot, Together, vLLM, …)
+    kcn_llm_base_url: str = ""
+    kcn_llm_api_key: str = ""
+    kcn_llm_model: str = "kimi-k3"
+
     # Logging
     log_level: str = "INFO"
     log_format: str = "json"
