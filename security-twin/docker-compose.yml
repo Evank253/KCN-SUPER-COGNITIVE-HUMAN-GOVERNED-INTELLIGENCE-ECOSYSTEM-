@@ -1,0 +1,10 @@
+services:
+  kcn-security-twin:
+    build: .
+    ports:
+      - "8100:8100"
+    environment:
+      - KCN_TWIN=1
+      - JWT_SECRET_KEY=twin-only-not-for-production-change-me
+      - LOG_LEVEL=INFO
+    restart: "no"
