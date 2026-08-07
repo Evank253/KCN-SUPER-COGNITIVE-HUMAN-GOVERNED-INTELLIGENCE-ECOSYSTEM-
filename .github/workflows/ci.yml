@@ -1,6 +1,6 @@
 name: CI
 
-on:
+on:Python
   push:
     branches: [main, develop, "copilot/kcn-super-cognitive-ecosystem"]
   pull_request:
@@ -9,7 +9,7 @@ on:
 jobs:
   test-backend:
     name: Backend (Python 3.12)
-    runs-on: ubuntu-latest
+    runs-on:Python
     permissions:
       contents: read
 
