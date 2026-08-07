@@ -1,14 +1,14 @@
 """
 KCN Security Twin — isolated FastAPI target for authorized external testing.
 
-This is NOT the real system. It contains no production secrets or data.
-All audit records are marked TWIN TEST LOG — NOT PRODUCTION.
+v0.2: rate-limit/lockout, token blacklist, stricter JWT, request size limits.
+This is NOT the real system. All audit records are TWIN TEST LOG — NOT PRODUCTION.
 """
 
 import logging
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -17,12 +17,14 @@ from pydantic import BaseModel, Field
 from app.audit_store import get_events, record, summary
 from app.config import settings
 from app.logging_mw import TwinAuditMiddleware
+from app.rate_limit import is_locked, record_failure, record_success
 from app.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
     verify_password,
 )
+from app.token_blacklist import revoke
 
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger("kcn.twin")
@@ -30,9 +32,8 @@ logger = logging.getLogger("kcn.twin")
 app = FastAPI(
     title="KCN Security Twin",
     description=(
-        "ISOLATED TEST TARGET. Disposable twin of the KCN security surface. "
-        "No real secrets. No production data. Authorized testing only. "
-        "All logs are marked TWIN TEST LOG — NOT PRODUCTION."
+        "ISOLATED TEST TARGET v0.2. Rate-limited login, token blacklist on logout, "
+        "strict JWT claims, request size limits. No real secrets. Authorized testing only."
     ),
     version=settings.app_version,
     docs_url="/docs",
@@ -50,10 +51,6 @@ app.add_middleware(TwinAuditMiddleware)
 
 bearer = HTTPBearer(auto_error=False)
 
-# ---------------------------------------------------------------------------
-# Stub users (test only)
-# ---------------------------------------------------------------------------
-
 from passlib.context import CryptContext
 
 _ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -70,11 +67,6 @@ _STUB_USERS = {
         "roles": ["user"],
     },
 }
-
-
-# ---------------------------------------------------------------------------
-# Schemas
-# ---------------------------------------------------------------------------
 
 
 class LoginRequest(BaseModel):
@@ -101,19 +93,18 @@ class MessageResponse(BaseModel):
 
 
 class RememberRequest(BaseModel):
-    content: str
-    tags: list[str] = []
+    content: str = Field(..., min_length=1, max_length=settings.memory_max_content_chars)
+    tags: list[str] = Field(default_factory=list, max_length=settings.memory_max_tags)
 
 
 class SkillRegisterRequest(BaseModel):
-    name: str
-    description: str = ""
-    version: str = "0.1.0"
+    name: str = Field(..., min_length=1, max_length=64)
+    description: str = Field(default="", max_length=512)
+    version: str = Field(default="0.1.0", max_length=32)
 
 
-# ---------------------------------------------------------------------------
-# Auth helpers
-# ---------------------------------------------------------------------------
+def _client_ip(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
 
 
 def get_current_user(
@@ -121,9 +112,9 @@ def get_current_user(
 ) -> dict[str, Any]:
     if not creds:
         raise HTTPException(status_code=401, detail="Not authenticated (twin)")
-    payload = decode_token(creds.credentials)
-    if not payload or payload.get("type") != "access":
-        raise HTTPException(status_code=401, detail="Invalid or expired token (twin)")
+    payload = decode_token(creds.credentials, expected_type="access", check_blacklist=True)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid, expired, or revoked token (twin)")
     return payload
 
 
@@ -133,46 +124,95 @@ def require_admin(user: dict = Depends(get_current_user)) -> dict:
     return user
 
 
-# ---------------------------------------------------------------------------
-# Routes
-# ---------------------------------------------------------------------------
+@app.middleware("http")
+async def body_size_limit(request: Request, call_next):
+    cl = request.headers.get("content-length")
+    if cl and cl.isdigit() and int(cl) > settings.max_request_body_bytes:
+        record(
+            "size_reject",
+            path=str(request.url.path),
+            content_length=int(cl),
+            limit=settings.max_request_body_bytes,
+        )
+        return JSONResponse(
+            status_code=413,
+            content={
+                "detail": "Request body too large (twin)",
+                "limit_bytes": settings.max_request_body_bytes,
+                "twin": True,
+            },
+            headers={"X-KCN-Twin": "true"},
+        )
+    return await call_next(request)
 
 
 @app.on_event("startup")
 async def on_startup():
     record("session_start", service=settings.app_name, version=settings.app_version)
-    logger.info("KCN Security Twin started — audit logging active")
+    logger.info("KCN Security Twin v%s started — hardened controls active", settings.app_version)
 
 
 @app.get("/")
 async def root():
     return {
         "service": "KCN Security Twin",
+        "version": settings.app_version,
         "status": "ISOLATED_TEST_TARGET",
-        "notice": "This is a disposable twin. No real secrets or production data.",
+        "controls": [
+            "login_rate_limit_lockout",
+            "token_blacklist_on_logout",
+            "strict_jwt_claims",
+            "request_size_limits",
+        ],
+        "notice": "Disposable twin. No real secrets or production data.",
         "docs": "/docs",
-        "audit_export": "/api/v1/audit/export (admin token required)",
         "twin": True,
     }
 
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "twin": True, "service": settings.app_name}
+    return {"status": "ok", "twin": True, "service": settings.app_name, "version": settings.app_version}
 
 
 @app.post(f"{settings.api_prefix}/auth/login", response_model=TokenResponse)
-async def login(body: LoginRequest):
+async def login(body: LoginRequest, request: Request):
+    client = _client_ip(request)
+    locked, remaining = is_locked(body.username, client)
+    if locked:
+        record(
+            "auth_lockout",
+            username=body.username,
+            client=client,
+            remaining_seconds=remaining,
+        )
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many failed attempts. Locked for {remaining}s (twin)",
+            headers={"Retry-After": str(int(remaining) + 1)},
+        )
+
     user = _STUB_USERS.get(body.username)
     if not user or not verify_password(body.password, user["hashed_password"]):
-        record("auth_failure", username=body.username, reason="invalid_credentials")
-        logger.warning("Twin login failed for username=%s", body.username)
+        now_locked, lock_secs = record_failure(body.username, client)
+        record(
+            "auth_failure",
+            username=body.username,
+            client=client,
+            locked=now_locked,
+        )
+        if now_locked:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Too many failed attempts. Locked for {lock_secs}s (twin)",
+                headers={"Retry-After": str(int(lock_secs))},
+            )
         raise HTTPException(status_code=401, detail="Invalid credentials (twin)")
 
+    record_success(body.username, client)
     access = create_access_token(user["username"], {"roles": user["roles"]})
     refresh = create_refresh_token(user["username"])
-    record("auth_success", username=user["username"], roles=user["roles"])
-    logger.info("Twin user authenticated: %s", user["username"])
+    record("auth_success", username=user["username"], roles=user["roles"], client=client)
     return TokenResponse(
         access_token=access,
         refresh_token=refresh,
@@ -182,19 +222,23 @@ async def login(body: LoginRequest):
 
 @app.post(f"{settings.api_prefix}/auth/refresh")
 async def refresh(body: RefreshRequest):
-    payload = decode_token(body.refresh_token)
-    if not payload or payload.get("type") != "refresh":
-        record("auth_failure", reason="invalid_refresh_token")
-        raise HTTPException(status_code=401, detail="Invalid refresh token (twin)")
+    payload = decode_token(body.refresh_token, expected_type="refresh", check_blacklist=True)
+    if not payload:
+        record("auth_failure", reason="invalid_or_revoked_refresh")
+        raise HTTPException(status_code=401, detail="Invalid, expired, or revoked refresh token (twin)")
     username = payload.get("sub", "")
     user = _STUB_USERS.get(username)
     if not user:
         record("auth_failure", username=username, reason="user_not_found")
         raise HTTPException(status_code=401, detail="User not found (twin)")
+    # rotate: revoke old refresh jti
+    revoke(payload.get("jti", ""), payload.get("exp"))
     access = create_access_token(username, {"roles": user["roles"]})
+    new_refresh = create_refresh_token(username)
     record("auth_refresh", username=username)
     return {
         "access_token": access,
+        "refresh_token": new_refresh,
         "token_type": "bearer",
         "expires_in": settings.jwt_access_token_expire_minutes * 60,
         "twin": True,
@@ -202,9 +246,26 @@ async def refresh(body: RefreshRequest):
 
 
 @app.post(f"{settings.api_prefix}/auth/logout", response_model=MessageResponse)
-async def logout():
-    record("auth_logout")
-    return MessageResponse(message="Logged out (twin — no token blacklist in this target)")
+async def logout(
+    creds: HTTPAuthorizationCredentials | None = Depends(bearer),
+    body: RefreshRequest | None = None,
+):
+    revoked = []
+    if creds:
+        payload = decode_token(creds.credentials, expected_type="access", check_blacklist=False)
+        if payload and payload.get("jti"):
+            revoke(payload["jti"], payload.get("exp"))
+            revoked.append("access")
+    # optional refresh in body
+    if body and body.refresh_token:
+        rp = decode_token(body.refresh_token, expected_type="refresh", check_blacklist=False)
+        if rp and rp.get("jti"):
+            revoke(rp["jti"], rp.get("exp"))
+            revoked.append("refresh")
+    record("auth_logout", revoked=revoked)
+    return MessageResponse(
+        message=f"Logged out (twin). Revoked: {revoked or ['none — send Bearer access token']}"
+    )
 
 
 @app.get(f"{settings.api_prefix}/governance/status")
@@ -251,10 +312,14 @@ _skills_store: dict[str, dict] = {
 
 @app.post(f"{settings.api_prefix}/memory/remember")
 async def remember(body: RememberRequest, user: dict = Depends(get_current_user)):
+    # Pydantic already enforces max lengths; extra guard
+    if len(body.content) > settings.memory_max_content_chars:
+        record("size_reject", path="/memory/remember", reason="content_too_long")
+        raise HTTPException(status_code=413, detail="Content too large (twin)")
     entry = {
         "id": f"mem-{len(_memory_store)+1}",
         "content": body.content,
-        "tags": body.tags,
+        "tags": body.tags[: settings.memory_max_tags],
         "owner": user.get("sub"),
         "verified": False,
         "twin": True,
@@ -266,8 +331,10 @@ async def remember(body: RememberRequest, user: dict = Depends(get_current_user)
 
 @app.get(f"{settings.api_prefix}/memory/recall")
 async def recall(q: str = "", user: dict = Depends(get_current_user)):
+    if len(q) > 512:
+        raise HTTPException(status_code=400, detail="Query too long (twin)")
     results = [m for m in _memory_store if q.lower() in m["content"].lower()]
-    record("memory_recall", query=q, result_count=len(results), user=user.get("sub"))
+    record("memory_recall", query=q[:128], result_count=len(results), user=user.get("sub"))
     return {"query": q, "results": results[:10], "twin": True}
 
 
@@ -303,14 +370,8 @@ async def canary():
     }
 
 
-# ---------------------------------------------------------------------------
-# Audit export (proof-of-test logs)
-# ---------------------------------------------------------------------------
-
-
 @app.get(f"{settings.api_prefix}/audit/summary")
 async def audit_summary(user: dict = Depends(require_admin)):
-    """High-level counts for the current twin test session."""
     return summary()
 
 
@@ -320,19 +381,13 @@ async def audit_export(
     format: str = "json",
     user: dict = Depends(require_admin),
 ):
-    """
-    Export the twin audit log for the current session.
-
-    Every record is marked TWIN TEST LOG — NOT PRODUCTION.
-    This is evidence of activity against the twin only.
-    """
     events = get_events(limit=min(limit, 20_000))
     record("audit_export", by=user.get("sub"), count=len(events), format=format)
 
     if format == "jsonl":
-        body = "\n".join(
-            __import__("json").dumps(e, default=str) for e in events
-        ) + ("\n" if events else "")
+        import json as _json
+
+        body = "\n".join(_json.dumps(e, default=str) for e in events) + ("\n" if events else "")
         return PlainTextResponse(
             content=body,
             media_type="application/x-ndjson",
@@ -346,6 +401,7 @@ async def audit_export(
         content={
             "notice": "TWIN TEST LOG — NOT PRODUCTION",
             "service": "KCN Security Twin",
+            "version": settings.app_version,
             "exported_by": user.get("sub"),
             "event_count": len(events),
             "events": events,

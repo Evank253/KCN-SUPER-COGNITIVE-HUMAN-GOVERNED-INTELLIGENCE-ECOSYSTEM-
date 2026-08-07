@@ -36,6 +36,6 @@ class TwinAuditMiddleware(BaseHTTPMiddleware):
         )
 
         response.headers["X-KCN-Twin"] = "true"
-        response.headers["X-KCN-Twin-Version"] = "0.1.0"
+        response.headers["X-KCN-Twin-Version"] = "0.2.0"
         response.headers["X-KCN-Twin-Notice"] = "TEST-TARGET-ONLY"
         return response
