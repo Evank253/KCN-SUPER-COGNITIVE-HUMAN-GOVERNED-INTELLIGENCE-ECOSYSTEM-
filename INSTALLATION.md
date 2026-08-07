@@ -65,7 +65,7 @@ source venv/bin/activate
 venv\Scripts\activate
 
 # 4. Install dependencies
-pip install -r requirements.txt
+pip install -r requirements.txt -r requirements-dev.txt
 
 # 5. Copy environment configuration
 cp ../config/.env.example .env
@@ -128,7 +128,7 @@ LOG_FORMAT=json
 ```bash
 # Backend tests
 cd backend
-pip install -r requirements-dev.txt
+pip install -r requirements.txt -r requirements-dev.txt
 pytest tests/ -v
 
 # Frontend tests

@@ -1,20 +1,8 @@
 name: Deploy public demo to GitHub Pages
 
-on:// Octokit.js
-// https://github.com/octokit/core.js#readme
-const octokit = new Octokit({
-  auth: 'YOUR-TOKEN'
-})
-
-await octokit.request('GET /repos/{owner}/{repo}/pages', {
-  owner: 'OWNER',
-  repo: 'REPO',
-  headers: {
-    'X-GitHub-Api-Version': '2026-03-10'
-  }
-})
+on:
   push:
-    branches: ["copilot/kcn-super-cognitive-ecosystem", main, develop]
+    branches: ["copilot/kcn-super-cognitive-ecosystem", "main", "develop"]
   workflow_dispatch:
 
 permissions:
@@ -33,10 +21,14 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload public demo artifact
+        uses: actions/upload-pages-artifact@v3
         with:
           path: public-demo
-      - id: deployment
+      - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
