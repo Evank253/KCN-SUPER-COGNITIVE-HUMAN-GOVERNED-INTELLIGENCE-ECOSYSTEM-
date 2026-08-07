@@ -37,7 +37,7 @@ jobs:
           ruff check app/
 
       - name: Run tests (Pytest)
-        run: |
+        run: |yml
           cd backend
           pytest tests/ -v --tb=short
 
