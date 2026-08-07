@@ -18,6 +18,8 @@ from app.routes import (
     intelligence,
     verification,
     vibe,
+    memory,
+    skills,
 )
 
 setup_logging()
@@ -56,3 +58,5 @@ app.include_router(frontier_tools.router, prefix=settings.api_prefix, tags=["Fro
 app.include_router(
     fable_mythos_tools.router, prefix=settings.api_prefix, tags=["Fable · Mythos-style Agent Tools"]
 )
+app.include_router(memory.router, prefix=settings.api_prefix, tags=["Memory"])
+app.include_router(skills.router, prefix=settings.api_prefix, tags=["Skills"])
