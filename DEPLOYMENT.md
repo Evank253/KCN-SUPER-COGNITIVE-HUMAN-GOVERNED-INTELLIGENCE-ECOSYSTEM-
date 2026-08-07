@@ -49,6 +49,63 @@ LOG_FORMAT=json
 
 ---
 
+## Vercel Deployment (Frontend)
+
+The frontend can be deployed to Vercel directly from the command line using the Vercel CLI, which is included as a dev dependency.
+
+### Setup
+
+```bash
+# Install dependencies (includes Vercel CLI)
+npm install
+
+# Log in to Vercel (one-time setup)
+npx vercel login
+```
+
+### Deploy
+
+```bash
+# Deploy a preview (staging) build
+npm run deploy:preview
+
+# Deploy to production
+npm run deploy
+```
+
+You can also run the CLI directly:
+
+```bash
+npx vercel          # preview deployment
+npx vercel --prod   # production deployment
+```
+
+### Configuration
+
+The `vercel.json` file at the repository root configures the deployment:
+
+- **Framework**: Vite
+- **Install command**: `cd frontend && npm install --legacy-peer-deps`
+- **Build command**: `cd frontend && npm run build`
+- **Output directory**: `frontend/dist`
+- **Rewrites**: All routes fall back to `index.html` for SPA routing
+- **Security headers**: `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`
+
+### Environment Variables
+
+Set any required environment variables in the [Vercel Dashboard](https://vercel.com/dashboard) under **Project → Settings → Environment Variables**, or via the CLI:
+
+```bash
+npx vercel env add VITE_API_URL
+```
+
+### Troubleshooting
+
+- If the build fails due to a lockfile mismatch, run `npm install` inside `frontend/` to regenerate `frontend/package-lock.json`, then re-deploy.
+- Ensure Node.js ≥ 20 is selected in Vercel project settings to match the `engines` field in `package.json`.
+
+---
+
 ## Docker Deployment
 
 ### Build Images

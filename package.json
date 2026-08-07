@@ -6,9 +6,14 @@
   "scripts": {
     "dev": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build",
-    "preview": "npm --prefix frontend run preview"
+    "preview": "npm --prefix frontend run preview",
+    "deploy": "vercel --prod",
+    "deploy:preview": "vercel"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "vercel": "^58.7.0"
   }
 }
