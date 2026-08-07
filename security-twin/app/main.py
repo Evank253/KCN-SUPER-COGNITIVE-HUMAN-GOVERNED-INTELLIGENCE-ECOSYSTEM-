@@ -2,16 +2,19 @@
 KCN Security Twin — isolated FastAPI target for authorized external testing.
 
 This is NOT the real system. It contains no production secrets or data.
+All audit records are marked TWIN TEST LOG — NOT PRODUCTION.
 """
 
 import logging
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
+from app.audit_store import get_events, record, summary
 from app.config import settings
 from app.logging_mw import TwinAuditMiddleware
 from app.security import (
@@ -27,8 +30,9 @@ logger = logging.getLogger("kcn.twin")
 app = FastAPI(
     title="KCN Security Twin",
     description=(
-        "ISOLATED TEST TARGET. This is a disposable twin of the KCN security surface. "
-        "No real secrets. No production data. Authorized testing only."
+        "ISOLATED TEST TARGET. Disposable twin of the KCN security surface. "
+        "No real secrets. No production data. Authorized testing only. "
+        "All logs are marked TWIN TEST LOG — NOT PRODUCTION."
     ),
     version=settings.app_version,
     docs_url="/docs",
@@ -47,30 +51,25 @@ app.add_middleware(TwinAuditMiddleware)
 bearer = HTTPBearer(auto_error=False)
 
 # ---------------------------------------------------------------------------
-# Stub users (test only — never use these credentials elsewhere)
+# Stub users (test only)
 # ---------------------------------------------------------------------------
+
+from passlib.context import CryptContext
+
+_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 _STUB_USERS = {
     "twin-admin": {
         "username": "twin-admin",
-        # bcrypt of "twin-pass-change-me"
-        "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
+        "hashed_password": _ctx.hash("twin-pass-change-me"),
         "roles": ["admin"],
     },
     "twin-user": {
         "username": "twin-user",
-        # bcrypt of "twin-user-pass"
-        "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
+        "hashed_password": _ctx.hash("twin-user-pass"),
         "roles": ["user"],
     },
 }
-
-# Fix the hashes properly at import time so login works
-from passlib.context import CryptContext
-
-_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
-_STUB_USERS["twin-admin"]["hashed_password"] = _ctx.hash("twin-pass-change-me")
-_STUB_USERS["twin-user"]["hashed_password"] = _ctx.hash("twin-user-pass")
 
 
 # ---------------------------------------------------------------------------
@@ -128,9 +127,21 @@ def get_current_user(
     return payload
 
 
+def require_admin(user: dict = Depends(get_current_user)) -> dict:
+    if "admin" not in user.get("roles", []):
+        raise HTTPException(status_code=403, detail="Admin role required (twin)")
+    return user
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
+
+@app.on_event("startup")
+async def on_startup():
+    record("session_start", service=settings.app_name, version=settings.app_version)
+    logger.info("KCN Security Twin started — audit logging active")
 
 
 @app.get("/")
@@ -140,6 +151,7 @@ async def root():
         "status": "ISOLATED_TEST_TARGET",
         "notice": "This is a disposable twin. No real secrets or production data.",
         "docs": "/docs",
+        "audit_export": "/api/v1/audit/export (admin token required)",
         "twin": True,
     }
 
@@ -153,11 +165,13 @@ async def health():
 async def login(body: LoginRequest):
     user = _STUB_USERS.get(body.username)
     if not user or not verify_password(body.password, user["hashed_password"]):
+        record("auth_failure", username=body.username, reason="invalid_credentials")
         logger.warning("Twin login failed for username=%s", body.username)
         raise HTTPException(status_code=401, detail="Invalid credentials (twin)")
 
     access = create_access_token(user["username"], {"roles": user["roles"]})
     refresh = create_refresh_token(user["username"])
+    record("auth_success", username=user["username"], roles=user["roles"])
     logger.info("Twin user authenticated: %s", user["username"])
     return TokenResponse(
         access_token=access,
@@ -170,12 +184,15 @@ async def login(body: LoginRequest):
 async def refresh(body: RefreshRequest):
     payload = decode_token(body.refresh_token)
     if not payload or payload.get("type") != "refresh":
+        record("auth_failure", reason="invalid_refresh_token")
         raise HTTPException(status_code=401, detail="Invalid refresh token (twin)")
     username = payload.get("sub", "")
     user = _STUB_USERS.get(username)
     if not user:
+        record("auth_failure", username=username, reason="user_not_found")
         raise HTTPException(status_code=401, detail="User not found (twin)")
     access = create_access_token(username, {"roles": user["roles"]})
+    record("auth_refresh", username=username)
     return {
         "access_token": access,
         "token_type": "bearer",
@@ -186,6 +203,7 @@ async def refresh(body: RefreshRequest):
 
 @app.post(f"{settings.api_prefix}/auth/logout", response_model=MessageResponse)
 async def logout():
+    record("auth_logout")
     return MessageResponse(message="Logged out (twin — no token blacklist in this target)")
 
 
@@ -206,6 +224,7 @@ async def request_approval(
     action: str = "generic_action",
     user: dict = Depends(get_current_user),
 ):
+    record("governance_request", action=action, user=user.get("sub"))
     return {
         "request_id": "twin-req-001",
         "action": action,
@@ -215,11 +234,18 @@ async def request_approval(
     }
 
 
-# In-memory twin stores
 _memory_store: list[dict] = []
 _skills_store: dict[str, dict] = {
-    "structured_reasoning": {"name": "structured_reasoning", "version": "0.1.0", "status": "active"},
-    "human_approval": {"name": "human_approval", "version": "0.1.0", "status": "active"},
+    "structured_reasoning": {
+        "name": "structured_reasoning",
+        "version": "0.1.0",
+        "status": "active",
+    },
+    "human_approval": {
+        "name": "human_approval",
+        "version": "0.1.0",
+        "status": "active",
+    },
 }
 
 
@@ -234,12 +260,14 @@ async def remember(body: RememberRequest, user: dict = Depends(get_current_user)
         "twin": True,
     }
     _memory_store.append(entry)
+    record("memory_write", owner=user.get("sub"), entry_id=entry["id"])
     return {"status": "stored", "entry": entry, "twin": True}
 
 
 @app.get(f"{settings.api_prefix}/memory/recall")
 async def recall(q: str = "", user: dict = Depends(get_current_user)):
     results = [m for m in _memory_store if q.lower() in m["content"].lower()]
+    record("memory_recall", query=q, result_count=len(results), user=user.get("sub"))
     return {"query": q, "results": results[:10], "twin": True}
 
 
@@ -249,9 +277,9 @@ async def list_skills(user: dict = Depends(get_current_user)):
 
 
 @app.post(f"{settings.api_prefix}/skills/register")
-async def register_skill(body: SkillRegisterRequest, user: dict = Depends(get_current_user)):
-    if "admin" not in user.get("roles", []):
-        raise HTTPException(status_code=403, detail="Admin role required (twin)")
+async def register_skill(
+    body: SkillRegisterRequest, user: dict = Depends(require_admin)
+):
     _skills_store[body.name] = {
         "name": body.name,
         "description": body.description,
@@ -260,15 +288,67 @@ async def register_skill(body: SkillRegisterRequest, user: dict = Depends(get_cu
         "registered_by": user.get("sub"),
         "twin": True,
     }
+    record("skill_register", skill=body.name, by=user.get("sub"))
     return {"status": "registered", "skill": _skills_store[body.name], "twin": True}
 
 
 @app.get(f"{settings.api_prefix}/canary")
 async def canary():
-    """Intentional canary endpoint — useful for measuring whether probes reach it."""
+    record("canary_hit")
     logger.warning("Canary endpoint hit")
     return {
         "canary": "alive",
         "message": "If you see this, the twin is reachable and logging the hit.",
         "twin": True,
     }
+
+
+# ---------------------------------------------------------------------------
+# Audit export (proof-of-test logs)
+# ---------------------------------------------------------------------------
+
+
+@app.get(f"{settings.api_prefix}/audit/summary")
+async def audit_summary(user: dict = Depends(require_admin)):
+    """High-level counts for the current twin test session."""
+    return summary()
+
+
+@app.get(f"{settings.api_prefix}/audit/export")
+async def audit_export(
+    limit: int = 5000,
+    format: str = "json",
+    user: dict = Depends(require_admin),
+):
+    """
+    Export the twin audit log for the current session.
+
+    Every record is marked TWIN TEST LOG — NOT PRODUCTION.
+    This is evidence of activity against the twin only.
+    """
+    events = get_events(limit=min(limit, 20_000))
+    record("audit_export", by=user.get("sub"), count=len(events), format=format)
+
+    if format == "jsonl":
+        body = "\n".join(
+            __import__("json").dumps(e, default=str) for e in events
+        ) + ("\n" if events else "")
+        return PlainTextResponse(
+            content=body,
+            media_type="application/x-ndjson",
+            headers={
+                "Content-Disposition": "attachment; filename=kcn-twin-audit.jsonl",
+                "X-KCN-Twin-Notice": "TWIN-TEST-LOG-NOT-PRODUCTION",
+            },
+        )
+
+    return JSONResponse(
+        content={
+            "notice": "TWIN TEST LOG — NOT PRODUCTION",
+            "service": "KCN Security Twin",
+            "exported_by": user.get("sub"),
+            "event_count": len(events),
+            "events": events,
+        },
+        headers={"X-KCN-Twin-Notice": "TWIN-TEST-LOG-NOT-PRODUCTION"},
+    )

@@ -7,6 +7,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app/ ./app/
 
+RUN mkdir -p /logs
+
 ENV PYTHONUNBUFFERED=1
 ENV KCN_TWIN=1
 

@@ -7,4 +7,9 @@ services:
       - KCN_TWIN=1
       - JWT_SECRET_KEY=twin-only-not-for-production-change-me
       - LOG_LEVEL=INFO
+    volumes:
+      - twin-logs:/logs
     restart: "no"
+
+volumes:
+  twin-logs:
