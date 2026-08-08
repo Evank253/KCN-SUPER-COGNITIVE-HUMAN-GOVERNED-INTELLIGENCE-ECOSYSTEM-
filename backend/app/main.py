@@ -11,6 +11,7 @@ from app.core.logging import setup_logging
 from app.middleware.logging import LoggingMiddleware
 from app.routes import (
     auth,
+    authority,
     fable_mythos_tools,
     frontier_tools,
     governance,
@@ -51,6 +52,7 @@ app.add_middleware(LoggingMiddleware)
 app.include_router(health.router, tags=["Health"])
 app.include_router(auth.router, prefix=settings.api_prefix, tags=["Authentication"])
 app.include_router(governance.router, prefix=settings.api_prefix, tags=["Governance"])
+app.include_router(authority.router, prefix=settings.api_prefix, tags=["Authority Boundary"])
 app.include_router(intelligence.router, prefix=settings.api_prefix, tags=["Intelligence"])
 app.include_router(verification.router, prefix=settings.api_prefix, tags=["Verification"])
 app.include_router(vibe.router, prefix=settings.api_prefix, tags=["Vibe · Jarvis · Kronos"])

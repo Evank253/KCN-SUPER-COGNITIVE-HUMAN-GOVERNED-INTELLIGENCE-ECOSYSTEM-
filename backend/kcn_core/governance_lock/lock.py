@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from backend.governance.engine import governance
+try:
+    from governance.engine import governance
+except ImportError:  # pragma: no cover
+    from backend.governance.engine import governance  # type: ignore
 
 
 class GovernanceLock:
