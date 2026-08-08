@@ -1,3 +1,3 @@
-from .self_mod import self_mod_lock
+from .lock import governance_lock, GovernanceLock
 
-__all__ = ["self_mod_lock"]
+__all__ = ["governance_lock", "GovernanceLock"]

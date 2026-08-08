@@ -1,3 +1,3 @@
-from .sandbox import discovery_sandbox
+from .sandbox import sandbox, DiscoverySandbox
 
-__all__ = ["discovery_sandbox"]
+__all__ = ["sandbox", "DiscoverySandbox"]
