@@ -3,6 +3,8 @@ KCN Super Cognitive Human Governed Intelligence Ecosystem
 Backend Application — FastAPI entry point.
 """
 
+import app.bootstrap  # noqa: F401 — path setup before local imports
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -29,9 +31,7 @@ app = FastAPI(
     title=settings.app_name,
     description=(
         "KCN Super Cognitive Human Governed Intelligence Ecosystem API. "
-        "A modular platform where humans and intelligent systems collaborate "
-        "through governance, verification, security, knowledge management, "
-        "education, and innovation."
+        "Humans govern. Agents execute."
     ),
     version=settings.app_version,
     docs_url="/docs",
@@ -62,3 +62,14 @@ app.include_router(
 )
 app.include_router(memory.router, prefix=settings.api_prefix, tags=["Memory"])
 app.include_router(skills.router, prefix=settings.api_prefix, tags=["Skills"])
+
+
+@app.get("/")
+async def root() -> dict:
+    return {
+        "name": settings.app_name,
+        "version": settings.app_version,
+        "maturity": "L2",
+        "docs": "/docs",
+        "principle": "Humans govern. Agents execute.",
+    }

@@ -1,0 +1,3 @@
+# Fill when sealing:
+# git rev-parse HEAD
+# COMMIT_SHA=
