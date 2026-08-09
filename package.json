@@ -2,7 +2,7 @@
   "name": "kcn-super-cognitive",
   "private": true,
   "version": "0.1.0",
-  "description": "KCN Super Cognitive — monorepo root (frontend is the Vercel app)",
+  "description": "KCN Super Cognitive — monorepo root (frontend built via GitHub Actions, served via GitHub Pages/Docker)",
   "scripts": {
     "dev": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build",

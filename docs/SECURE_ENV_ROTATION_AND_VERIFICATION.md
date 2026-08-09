@@ -9,7 +9,7 @@ Handoff secrets in `SECURE_ENV_AND_KEYS/.env.secure` are **not** production cred
 1. Generate a new JWT secret (≥32 random bytes, hex or base64).
 2. Set a strong admin bootstrap password (or disable bootstrap after first real user).
 3. Replace Discord invite only if the server changes.
-4. Update deployment secrets (Vercel / host env vars) — never commit real secrets.
+4. Update deployment secrets (GitHub Actions repo/environment secrets, Docker host env vars) — never commit real secrets.
 5. Restart services so new values load.
 6. Log the rotation event with ISO-8601 timestamp (see Tracking phase).
 

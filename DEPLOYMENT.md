@@ -104,6 +104,18 @@ deploy:
 
 ---
 
+## Public Demo (GitHub Pages)
+
+A static preview of `public-demo/` is deployed automatically via `.github/workflows/pages.yml` on every push to `main`, `develop`, and `copilot/kcn-super-cognitive-ecosystem`. It requires GitHub Pages to be enabled once per repo:
+
+1. Repo Settings → Pages → Build and deployment → Source: **GitHub Actions**
+2. Push to a tracked branch (or run the workflow manually via `workflow_dispatch`)
+3. Live at `https://<owner>.github.io/<repo>/`
+
+This is a static demo only — it does not run the FastAPI backend. Use the Docker deployment above for the full stack.
+
+---
+
 ## Health Checks
 
 The backend exposes health check endpoints:

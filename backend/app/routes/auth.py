@@ -186,7 +186,7 @@ async def logout() -> MessageResponse:
 # password. Only usernames listed in `settings.github_admin_usernames` are
 # ever issued an admin JWT — everyone else who completes GitHub OAuth still
 # gets rejected with 403. Requires a GitHub OAuth App to be registered
-# (see docs/VERCEL_SETUP.md / DEPLOYMENT.md for setup steps) and the
+# (see DEPLOYMENT.md for setup steps) and the
 # GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET env vars set on the backend host.
 
 GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize"
