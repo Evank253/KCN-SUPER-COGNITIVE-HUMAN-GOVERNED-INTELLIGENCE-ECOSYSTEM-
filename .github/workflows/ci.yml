@@ -1,6 +1,6 @@
 name: CI
 
-on:Python
+on:
   push:
     branches: [main, develop, "copilot/kcn-super-cognitive-ecosystem"]
   pull_request:
@@ -9,7 +9,7 @@ on:Python
 jobs:
   test-backend:
     name: Backend (Python 3.12)
-    runs-on:Python
+    runs-on: ubuntu-latest
     permissions:
       contents: read
 
@@ -37,7 +37,7 @@ jobs:
           ruff check app/
 
       - name: Run tests (Pytest)
-        run: |yml
+        run: |
           cd backend
           pytest tests/ -v --tb=short
 
