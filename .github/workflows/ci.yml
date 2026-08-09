@@ -5,6 +5,7 @@ on:
     branches: [main, develop, "copilot/kcn-super-cognitive-ecosystem"]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:
 
 jobs:
   test-backend:
