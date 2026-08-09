@@ -1,15 +1,25 @@
 /** Dashboard page — ecosystem overview and health status. */
 
 import { useHealth } from '../hooks/useHealth'
+import { useReadiness } from '../hooks/useReadiness'
+import KcnCoreGraph from '../components/KcnCoreGraph'
 
 export default function DashboardPage() {
   const { health, loading, error } = useHealth()
+  const { readiness, loading: readinessLoading } = useReadiness()
 
   return (
     <div>
-      <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem' }}>
+      <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>
         Dashboard
       </h2>
+      <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+        Click any node to inspect that subsystem.
+      </p>
+
+      <section style={{ marginBottom: '1.5rem' }}>
+        <KcnCoreGraph components={readiness?.components ?? []} loading={readinessLoading} />
+      </section>
 
       {/* System Status Card */}
       <section

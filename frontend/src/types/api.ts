@@ -7,6 +7,21 @@ export interface HealthResponse {
   timestamp: string
 }
 
+/** A single subsystem/dependency status from the readiness probe. */
+export interface ComponentStatus {
+  name: string
+  status: 'up' | 'down' | 'degraded'
+  detail?: string | null
+}
+
+/** Readiness probe response — real per-component status, not simulated. */
+export interface ReadinessResponse {
+  status: 'ready' | 'not_ready'
+  version: string
+  timestamp: string
+  components: ComponentStatus[]
+}
+
 /** Governance policy record. */
 export interface Policy {
   id: string
