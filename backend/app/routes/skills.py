@@ -4,19 +4,18 @@ Skills API routes — Skills Registry exposure.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+import sys
+from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
-
-import sys
-from pathlib import Path
 
 _repo_root = Path(__file__).resolve().parents[3]
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
-from education.skills.skills_registry import skills_registry  # noqa: E402
+from education.skills.skills_registry import skills_registry
 
 router = APIRouter(prefix="/skills", tags=["Skills"])
 
@@ -26,21 +25,21 @@ class RegisterSkillRequest(BaseModel):
     description: str = ""
     category: str = "general"
     version: str = "1.0.0"
-    required_permissions: List[str] = Field(default_factory=list)
+    required_permissions: list[str] = Field(default_factory=list)
     requires_human_approval: bool = True
-    tools: List[str] = Field(default_factory=list)
-    tags: List[str] = Field(default_factory=list)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    skill_id: Optional[str] = None
+    tools: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    skill_id: str | None = None
     status: str = "pending_review"
 
 
 @router.get("/")
 def list_skills(
-    category: Optional[str] = Query(None),
-    tag: Optional[str] = Query(None),
-    status: Optional[str] = Query("active"),
-    requires_human_approval: Optional[bool] = Query(None),
+    category: str | None = Query(None),
+    tag: str | None = Query(None),
+    status: str | None = Query("active"),
+    requires_human_approval: bool | None = Query(None),
 ):
     return {
         "skills": skills_registry.list(

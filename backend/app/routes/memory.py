@@ -4,57 +4,56 @@ Memory API routes — Federated Memory Service exposure.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
-
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
-
 # Import path assumes knowledge is on PYTHONPATH or mounted; for backend isolation
 # we use a thin relative import via sys.path adjustment if needed.
 import sys
 from pathlib import Path
+from typing import Any
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
 _repo_root = Path(__file__).resolve().parents[3]
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
-from knowledge.memory.federated_memory import memory_service  # noqa: E402
+from knowledge.memory.federated_memory import memory_service
 
 router = APIRouter(prefix="/memory", tags=["Memory"])
 
 
 class RememberRequest(BaseModel):
-    embedding: List[float]
-    payload: Dict[str, Any]
+    embedding: list[float]
+    payload: dict[str, Any]
     verified: bool = False
     human_approved: bool = False
     source: str = "api"
-    tags: Optional[List[str]] = None
-    vector_id: Optional[str] = None
+    tags: list[str] | None = None
+    vector_id: str | None = None
 
 
 class RecallRequest(BaseModel):
-    query_embedding: List[float]
+    query_embedding: list[float]
     top_k: int = Field(default=5, ge=1, le=50)
     require_verified: bool = True
     require_human_approved: bool = False
-    tags: Optional[List[str]] = None
+    tags: list[str] | None = None
     min_similarity: float = 0.0
 
 
 class OpenSessionRequest(BaseModel):
-    user_id: Optional[str] = None
-    agent_id: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
-    ttl_seconds: Optional[int] = None
+    user_id: str | None = None
+    agent_id: str | None = None
+    metadata: dict[str, Any] | None = None
+    ttl_seconds: int | None = None
 
 
 class AddTurnRequest(BaseModel):
     session_id: str
     role: str
     content: str
-    tool_calls: Optional[List[Dict[str, Any]]] = None
-    metadata: Optional[Dict[str, Any]] = None
+    tool_calls: list[dict[str, Any]] | None = None
+    metadata: dict[str, Any] | None = None
 
 
 @router.get("/health")

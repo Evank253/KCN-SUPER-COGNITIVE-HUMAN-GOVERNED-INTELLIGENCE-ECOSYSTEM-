@@ -297,9 +297,8 @@ async def code_execution(body: CodeExecRequest) -> dict[str, Any]:
         tree = ast.parse(body.code, mode="exec")
         for node in ast.walk(tree):
             if isinstance(node, (ast.Import, ast.ImportFrom, ast.With, ast.AsyncFunctionDef)):
-                raise ValueError("imports/with/async not allowed in sandbox")
+                raise TypeError("imports/with/async not allowed in sandbox")
         # Extremely limited: compute only if pure expression print targets
-        local: dict[str, Any] = {}
         # Prefer expression eval for single-line math-like scripts
         if len(tree.body) == 1 and isinstance(tree.body[0], ast.Expr):
             result = ast.literal_eval(body.code.strip())  # type: ignore[arg-type]
@@ -371,10 +370,13 @@ async def context_edit(body: ContextEditRequest) -> dict[str, Any]:
     out: list[dict[str, Any]] = []
     cleared = 0
     for i, m in enumerate(body.messages):
-        if body.clear_before_index is not None and i < body.clear_before_index:
-            if m.get("role") == "tool" or m.get("tool_calls"):
-                cleared += 1
-                continue
+        if (
+            body.clear_before_index is not None
+            and i < body.clear_before_index
+            and (m.get("role") == "tool" or m.get("tool_calls"))
+        ):
+            cleared += 1
+            continue
         if body.clear_tool_results and m.get("role") == "tool":
             cleared += 1
             out.append({**m, "content": "[tool result cleared]"})

@@ -47,7 +47,7 @@ def _check_config() -> ComponentStatus:
         _ = settings.app_name
         _ = settings.app_version
         return ComponentStatus(name="config", status="up", detail="settings loaded")
-    except Exception as exc:  # pragma: no cover - defensive
+    except Exception as exc:  # noqa: BLE001 — pragma: no cover - readiness probe must never raise
         return ComponentStatus(name="config", status="down", detail=str(exc))
 
 
@@ -105,7 +105,7 @@ async def _check_llm_upstream() -> ComponentStatus:
             status="degraded",
             detail="timeout contacting upstream",
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — readiness probe must never raise
         return ComponentStatus(
             name="llm_upstream",
             status="degraded",

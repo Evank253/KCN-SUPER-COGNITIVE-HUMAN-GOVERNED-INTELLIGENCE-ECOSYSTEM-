@@ -16,10 +16,10 @@ from app.routes import (
     governance,
     health,
     intelligence,
-    verification,
-    vibe,
     memory,
     skills,
+    verification,
+    vibe,
 )
 
 setup_logging()

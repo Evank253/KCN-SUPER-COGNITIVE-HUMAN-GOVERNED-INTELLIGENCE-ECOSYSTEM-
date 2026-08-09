@@ -8,6 +8,7 @@ This is the control-plane layer. Optional upstream LLM via KCN_LLM_* env.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -333,8 +334,14 @@ async def chat_completions(body: ChatCompletionRequest) -> ChatCompletionRespons
                 },
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=120) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
+
+            def _do_request() -> dict[str, Any]:
+                # Runs in a worker thread — urlopen is blocking and must not
+                # run directly on the event loop inside an async endpoint.
+                with urllib.request.urlopen(req, timeout=120) as resp:
+                    return json.loads(resp.read().decode("utf-8"))
+
+            data = await asyncio.to_thread(_do_request)
             choice0 = data["choices"][0]["message"]
             content = choice0.get("content") or content
             reasoning = choice0.get("reasoning_content") or choice0.get("reasoning") or reasoning
