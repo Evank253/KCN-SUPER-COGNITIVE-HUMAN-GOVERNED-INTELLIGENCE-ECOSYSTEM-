@@ -10,7 +10,11 @@ from datetime import datetime, timezone
 from hashlib import sha256
 from typing import Any, ClassVar
 
+from app.security_fabric.confidence import ConfidenceError, first_confidence, normalize_confidence
+from app.security_fabric.misp_json import event_fields as misp_event_fields
+from app.security_fabric.misp_json import unwrap_event as unwrap_misp_event
 from app.security_fabric.models import SecurityEvent
+from app.security_fabric.stix_patterns import indicator_fields
 
 
 class AdapterError(ValueError):
@@ -36,23 +40,50 @@ class Adapter(ABC):
 
     @classmethod
     def _timestamp(cls, raw: dict[str, Any]) -> datetime:
-        value = raw.get("timestamp") or raw.get("ts")
+        value = (
+            raw.get("timestamp")
+            or raw.get("ts")
+            or raw.get("valid_from")
+            or raw.get("validFrom")
+            or raw.get("created")
+            or raw.get("date")
+        )
         if isinstance(value, datetime):
             return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        if isinstance(value, bool):
+            return datetime.now(timezone.utc)
         if isinstance(value, (int, float)):
             return datetime.fromtimestamp(value, tz=timezone.utc)
         if isinstance(value, str):
-            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+            text = value.strip()
+            if text.isdigit():
+                return datetime.fromtimestamp(int(text), tz=timezone.utc)
+            parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
         return datetime.now(timezone.utc)
 
     @classmethod
     def _base(cls, raw: dict[str, Any], event_type: str, observable: dict[str, Any], **kwargs: Any) -> SecurityEvent:
-        event_id = str(raw.get("event_id") or raw.get("uid") or raw.get("id") or sha256(repr(sorted(raw.items())).encode()).hexdigest()[:24])
+        event_id = str(
+            kwargs.pop("event_id", None)
+            or raw.get("event_id")
+            or raw.get("uid")
+            or raw.get("uuid")
+            or raw.get("standard_id")
+            or raw.get("id")
+            or sha256(repr(sorted(raw.items())).encode()).hexdigest()[:24]
+        )
+        if "confidence" in kwargs:
+            kwargs["confidence"] = _normalized_confidence(kwargs.get("confidence"))
+        timestamp_hint = kwargs.pop("timestamp_hint", None)
+        timestamp_raw = raw
+        if timestamp_hint and not (raw.get("timestamp") or raw.get("ts")):
+            timestamp_raw = {**raw, "timestamp": timestamp_hint}
         return SecurityEvent(
             event_id=event_id,
             source=cls.source,
             sensor_id=str(raw.get("sensor_id") or raw.get("sensor") or cls.source),
-            timestamp=cls._timestamp(raw),
+            timestamp=cls._timestamp(timestamp_raw),
             event_type=event_type,
             observable=observable,
             provenance={"adapter": cls.__name__, "engine": cls.engine, "raw_event": True},
@@ -71,6 +102,54 @@ def _require(raw: dict[str, Any], key: str) -> Any:
     return raw[key]
 
 
+def _normalized_confidence(value: Any) -> float | None:
+    try:
+        return normalize_confidence(value)
+    except ConfidenceError as exc:
+        raise AdapterError(str(exc)) from exc
+
+
+def _stix_observables(raw: dict[str, Any]) -> dict[str, Any]:
+    """Extract scalar STIX SCO values without interpreting threat semantics."""
+    stix_type = str(raw.get("type") or raw.get("entity_type") or "")
+    observable: dict[str, Any] = {}
+    value = raw.get("value")
+    mapping = {
+        "ipv4-addr": "ip", "ipv6-addr": "ip", "domain-name": "domain",
+        "url": "url", "file": "hash", "email-addr": "email", "mac-addr": "mac",
+    }
+    key = mapping.get(stix_type)
+    if key is not None and isinstance(value, (str, int, float)) and not isinstance(value, bool):
+        observable[key] = value
+    hashes = raw.get("hashes")
+    if isinstance(hashes, dict):
+        names = {
+            "md5": "hash_md5", "sha1": "hash_sha1", "sha-1": "hash_sha1",
+            "sha256": "hash_sha256", "sha-256": "hash_sha256",
+            "sha512": "hash_sha512", "sha-512": "hash_sha512",
+        }
+        for algorithm, digest in hashes.items():
+            mapped = names.get(str(algorithm).lower())
+            if mapped and isinstance(digest, str) and digest:
+                observable[mapped] = digest
+                if "hash" not in observable:
+                    observable["hash"] = digest
+    return observable
+
+
+def _stix_relationship(raw: dict[str, Any]) -> dict[str, Any]:
+    relationship = raw.get("relationship")
+    if isinstance(relationship, dict):
+        return relationship
+    if raw.get("type") == "relationship":
+        return {
+            key: raw[key]
+            for key in ("source_ref", "target_ref", "relationship_type")
+            if raw.get(key) is not None
+        }
+    return {}
+
+
 class ZeekAdapter(Adapter):
     source = "zeek"
     engine = "Zeek"
@@ -81,7 +160,7 @@ class ZeekAdapter(Adapter):
             "src_ip": raw.get("id.orig_h"), "src_port": raw.get("id.orig_p"),
             "dst_ip": raw.get("id.resp_h"), "dst_port": raw.get("id.resp_p"),
             "uid": raw.get("uid"),
-        }, detection=raw.get("notice_type"), confidence=raw.get("confidence"))
+        }, detection=raw.get("notice_type"), confidence=_normalized_confidence(raw.get("confidence")))
         return AdapterResult(event, cls._hash_raw(raw))
 
 
@@ -96,7 +175,7 @@ class SuricataAdapter(Adapter):
             "src_ip": raw.get("src_ip"), "src_port": raw.get("src_port"),
             "dst_ip": raw.get("dest_ip"), "dst_port": raw.get("dest_port"),
             "signature_id": alert.get("signature_id"),
-        }, detection=alert.get("signature"), threat=alert.get("category"), confidence=raw.get("confidence"))
+        }, detection=alert.get("signature"), threat=alert.get("category"), confidence=_normalized_confidence(raw.get("confidence")))
         return AdapterResult(event, cls._hash_raw(raw))
 
 
@@ -111,7 +190,7 @@ class WazuhAdapter(Adapter):
         event = cls._base(raw, str(raw.get("event_type") or "endpoint_alert"), {
             "agent_id": agent.get("id"), "agent_name": agent.get("name"),
             "rule_id": rule.get("id"), "level": rule.get("level"),
-        }, agent_id=agent.get("id"), detection=rule.get("description"), confidence=raw.get("confidence"))
+        }, agent_id=agent.get("id"), detection=rule.get("description"), confidence=_normalized_confidence(raw.get("confidence")))
         return AdapterResult(event, cls._hash_raw(raw))
 
 
@@ -148,10 +227,30 @@ class OpenCTIAdapter(Adapter):
 
     @classmethod
     def adapt(cls, raw: dict[str, Any]) -> AdapterResult:
-        event = cls._base(raw, "threat_intelligence", {
-            "stix_id": raw.get("id") or raw.get("stix_id"),
-            "entity_type": raw.get("entity_type"), "labels": raw.get("labels", []),
-        }, threat=raw.get("threat"), confidence=raw.get("confidence"), entity=raw.get("entity") or {})
+        if str(raw.get("type") or "").lower() == "bundle":
+            raise AdapterError("STIX bundles must be unpacked before adapt()")
+        fields = indicator_fields(raw)
+        stix_type = raw.get("type") or raw.get("entity_type")
+        observable = {
+            "stix_id": raw.get("id") or raw.get("standard_id") or raw.get("stix_id"),
+            "entity_type": stix_type,
+        }
+        observable.update(_stix_observables(raw))
+        observable.update(fields["observable"])
+        entity = dict(fields["entity"])
+        if isinstance(raw.get("entity"), dict):
+            entity.update(raw["entity"])
+        event = cls._base(
+            raw,
+            "threat_intelligence",
+            {key: value for key, value in observable.items() if value not in (None, "")},
+            threat=raw.get("threat"),
+            confidence=first_confidence(raw.get("confidence"), raw.get("x_opencti_score")),
+            entity=entity,
+            relationship=_stix_relationship(raw),
+            detection=fields["detection"],
+            timestamp_hint=fields["timestamp_hint"],
+        )
         return AdapterResult(event, cls._hash_raw(raw))
 
 
@@ -161,10 +260,18 @@ class MISPAdapter(Adapter):
 
     @classmethod
     def adapt(cls, raw: dict[str, Any]) -> AdapterResult:
-        event = cls._base(raw, "threat_intelligence", {
-            "event_uuid": raw.get("uuid") or raw.get("event_uuid"),
-            "attribute_type": raw.get("type"), "value": raw.get("value"),
-        }, threat=raw.get("threat"), confidence=raw.get("confidence"))
+        fields = misp_event_fields(raw)
+        event = cls._base(
+            raw,
+            fields["event_type"],
+            fields["observable"],
+            event_id=fields["event_id"],
+            entity=fields["entity"],
+            detection=fields["detection"],
+            confidence=fields["confidence"],
+            timestamp_hint=fields["timestamp_hint"],
+            threat=raw.get("threat") or unwrap_misp_event(raw).get("threat"),
+        )
         return AdapterResult(event, cls._hash_raw(raw))
 
 
@@ -177,7 +284,7 @@ class SigmaAdapter(Adapter):
         event = cls._base(raw, "detection_rule_match", {
             "rule_id": raw.get("rule_id"), "rule_name": raw.get("rule_name"),
             "backend": raw.get("backend"),
-        }, detection=raw.get("detection") or raw.get("rule_name"), confidence=raw.get("confidence"))
+        }, detection=raw.get("detection") or raw.get("rule_name"), confidence=_normalized_confidence(raw.get("confidence")))
         return AdapterResult(event, cls._hash_raw(raw))
 
 
@@ -203,7 +310,7 @@ class FalcoAdapter(Adapter):
         event = cls._base(raw, "runtime_alert", {
             "container_id": raw.get("container.id"), "pod": raw.get("k8s.pod.name"),
             "namespace": raw.get("k8s.ns.name"), "process": raw.get("proc.name"),
-        }, detection=raw.get("rule") or raw.get("output"), confidence=raw.get("confidence"))
+        }, detection=raw.get("rule") or raw.get("output"), confidence=_normalized_confidence(raw.get("confidence")))
         return AdapterResult(event, cls._hash_raw(raw))
 
 
