@@ -4,7 +4,7 @@ import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from threading import Lock
+from threading import RLock
 from typing import Any
 
 
@@ -14,7 +14,7 @@ class GovernanceStore:
     def __init__(self, path: str | Path | None = None) -> None:
         self.path = Path(path or os.getenv("KCN_GOVERNANCE_STORE", "data/governance_approvals.jsonl"))
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._lock = Lock()
+        self._lock = RLock()
 
     def _records(self) -> list[dict[str, Any]]:
         if not self.path.exists():
@@ -31,6 +31,7 @@ class GovernanceStore:
             handle.write(json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n")
 
     def create(self, approval_id: str, case_id: str | None, action_type: str, description: str, data: dict | None) -> dict[str, Any]:
+        now = datetime.now(timezone.utc).isoformat()
         record = {
             "approval_id": approval_id,
             "case_id": case_id,
@@ -38,8 +39,8 @@ class GovernanceStore:
             "description": description,
             "data": data or {},
             "status": "pending",
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": now,
+            "updated_at": now,
             "human_authority": None,
         }
         with self._lock:
