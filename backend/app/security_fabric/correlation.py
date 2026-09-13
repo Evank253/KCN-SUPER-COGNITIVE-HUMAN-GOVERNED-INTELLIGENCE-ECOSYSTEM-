@@ -19,6 +19,7 @@ class CorrelationEngine:
         "src_ip", "dst_ip", "ip", "domain", "url", "hash", "uid",
         "session_id", "agent_id", "client_id", "flow_id", "stix_id",
         "event_uuid", "container_id",
+        "hash_md5", "hash_sha1", "hash_sha256", "hash_sha512", "email",
     })
     SCALAR_TYPES: ClassVar[tuple[type[Any], ...]] = (str, int, float, bool)
 
