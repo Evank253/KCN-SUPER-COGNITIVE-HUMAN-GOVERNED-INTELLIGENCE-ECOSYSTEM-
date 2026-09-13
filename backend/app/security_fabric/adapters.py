@@ -71,6 +71,46 @@ def _require(raw: dict[str, Any], key: str) -> Any:
     return raw[key]
 
 
+def _stix_observables(raw: dict[str, Any]) -> dict[str, Any]:
+    """Extract scalar STIX SCO values without interpreting threat semantics."""
+    stix_type = str(raw.get("type") or raw.get("entity_type") or "")
+    value = raw.get("value")
+    if value is None:
+        return {}
+    mapping = {
+        "ipv4-addr": "ip", "ipv6-addr": "ip", "domain-name": "domain",
+        "url": "url", "file": "hash",
+    }
+    key = mapping.get(stix_type)
+    if key is None or not isinstance(value, (str, int, float, bool)):
+        return {}
+    return {key: value}
+
+
+def _stix_relationship(raw: dict[str, Any]) -> dict[str, Any]:
+    relationship = raw.get("relationship")
+    if isinstance(relationship, dict):
+        return relationship
+    if raw.get("type") == "relationship":
+        return {
+            key: raw[key]
+            for key in ("source_ref", "target_ref", "relationship_type")
+            if raw.get(key) is not None
+        }
+    return {}
+
+
+def _normalized_confidence(value: Any) -> float | None:
+    if value is None:
+        return None
+    numeric = float(value)
+    if 0.0 <= numeric <= 1.0:
+        return numeric
+    if 0.0 <= numeric <= 100.0:
+        return numeric / 100.0
+    raise AdapterError("confidence must be between 0 and 100")
+
+
 class ZeekAdapter(Adapter):
     source = "zeek"
     engine = "Zeek"
@@ -81,7 +121,7 @@ class ZeekAdapter(Adapter):
             "src_ip": raw.get("id.orig_h"), "src_port": raw.get("id.orig_p"),
             "dst_ip": raw.get("id.resp_h"), "dst_port": raw.get("id.resp_p"),
             "uid": raw.get("uid"),
-        }, detection=raw.get("notice_type"), confidence=raw.get("confidence"))
+        }, detection=raw.get("notice_type"), confidence=_normalized_confidence(raw.get("confidence")))
         return AdapterResult(event, cls._hash_raw(raw))
 
 
@@ -96,7 +136,7 @@ class SuricataAdapter(Adapter):
             "src_ip": raw.get("src_ip"), "src_port": raw.get("src_port"),
             "dst_ip": raw.get("dest_ip"), "dst_port": raw.get("dest_port"),
             "signature_id": alert.get("signature_id"),
-        }, detection=alert.get("signature"), threat=alert.get("category"), confidence=raw.get("confidence"))
+        }, detection=alert.get("signature"), threat=alert.get("category"), confidence=_normalized_confidence(raw.get("confidence")))
         return AdapterResult(event, cls._hash_raw(raw))
 
 
@@ -111,7 +151,7 @@ class WazuhAdapter(Adapter):
         event = cls._base(raw, str(raw.get("event_type") or "endpoint_alert"), {
             "agent_id": agent.get("id"), "agent_name": agent.get("name"),
             "rule_id": rule.get("id"), "level": rule.get("level"),
-        }, agent_id=agent.get("id"), detection=rule.get("description"), confidence=raw.get("confidence"))
+        }, agent_id=agent.get("id"), detection=rule.get("description"), confidence=_normalized_confidence(raw.get("confidence")))
         return AdapterResult(event, cls._hash_raw(raw))
 
 
@@ -148,10 +188,21 @@ class OpenCTIAdapter(Adapter):
 
     @classmethod
     def adapt(cls, raw: dict[str, Any]) -> AdapterResult:
-        event = cls._base(raw, "threat_intelligence", {
+        stix_type = raw.get("type") or raw.get("entity_type")
+        observable = {
             "stix_id": raw.get("id") or raw.get("stix_id"),
-            "entity_type": raw.get("entity_type"), "labels": raw.get("labels", []),
-        }, threat=raw.get("threat"), confidence=raw.get("confidence"), entity=raw.get("entity") or {})
+            "entity_type": stix_type,
+        }
+        observable.update(_stix_observables(raw))
+        event = cls._base(
+            raw,
+            "threat_intelligence",
+            observable,
+            threat=raw.get("threat"),
+            confidence=_normalized_confidence(raw.get("confidence")),
+            entity=raw.get("entity") or {},
+            relationship=_stix_relationship(raw),
+        )
         return AdapterResult(event, cls._hash_raw(raw))
 
 
@@ -164,7 +215,7 @@ class MISPAdapter(Adapter):
         event = cls._base(raw, "threat_intelligence", {
             "event_uuid": raw.get("uuid") or raw.get("event_uuid"),
             "attribute_type": raw.get("type"), "value": raw.get("value"),
-        }, threat=raw.get("threat"), confidence=raw.get("confidence"))
+        }, threat=raw.get("threat"), confidence=_normalized_confidence(raw.get("confidence")))
         return AdapterResult(event, cls._hash_raw(raw))
 
 
@@ -177,7 +228,7 @@ class SigmaAdapter(Adapter):
         event = cls._base(raw, "detection_rule_match", {
             "rule_id": raw.get("rule_id"), "rule_name": raw.get("rule_name"),
             "backend": raw.get("backend"),
-        }, detection=raw.get("detection") or raw.get("rule_name"), confidence=raw.get("confidence"))
+        }, detection=raw.get("detection") or raw.get("rule_name"), confidence=_normalized_confidence(raw.get("confidence")))
         return AdapterResult(event, cls._hash_raw(raw))
 
 
@@ -203,7 +254,7 @@ class FalcoAdapter(Adapter):
         event = cls._base(raw, "runtime_alert", {
             "container_id": raw.get("container.id"), "pod": raw.get("k8s.pod.name"),
             "namespace": raw.get("k8s.ns.name"), "process": raw.get("proc.name"),
-        }, detection=raw.get("rule") or raw.get("output"), confidence=raw.get("confidence"))
+        }, detection=raw.get("rule") or raw.get("output"), confidence=_normalized_confidence(raw.get("confidence")))
         return AdapterResult(event, cls._hash_raw(raw))
 
 
