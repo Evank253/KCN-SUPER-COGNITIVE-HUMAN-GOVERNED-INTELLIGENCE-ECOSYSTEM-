@@ -2,12 +2,14 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.security_fabric.adapters import ADAPTERS, OpenCTIAdapter, SuricataAdapter, ZeekAdapter
+from app.security_fabric.adapters import ADAPTERS, AdapterError, MISPAdapter, OpenCTIAdapter, SuricataAdapter, ZeekAdapter
 from app.security_fabric.cases import SecurityCase
+from app.security_fabric.confidence import ConfidenceError, normalize_confidence
 from app.security_fabric.correlation import CorrelationEngine
 from app.security_fabric.evidence import build_evidence
 from app.security_fabric.models import SecurityEvent
 from app.security_fabric.normalize import Normalizer
+from app.security_fabric.stix_patterns import observables_from_stix_pattern, parse_stix_pattern
 
 
 def make_event(event_id: str, observable: dict, offset: int = 0) -> SecurityEvent:
@@ -188,3 +190,88 @@ def test_security_case_preserves_events_and_evidence():
     assert case.decision is None
     assert case.action is None
     assert case.human_authority is None
+
+
+def test_normalize_confidence_accepts_unit_and_percent_scales():
+    assert normalize_confidence(None) is None
+    assert normalize_confidence(0.8) == 0.8
+    assert normalize_confidence(80) == 0.8
+    assert normalize_confidence("80") == 0.8
+
+
+def test_normalize_confidence_rejects_boolean_and_out_of_range():
+    with pytest.raises(ConfidenceError):
+        normalize_confidence(True)
+    with pytest.raises(ConfidenceError):
+        normalize_confidence(150)
+
+
+def test_stix_indicator_pattern_extracts_equality_atoms():
+    pattern = "[ipv4-addr:value = '198.51.100.1' AND file:hashes.'SHA-256' = 'aa']"
+    atoms = parse_stix_pattern(pattern)
+    assert atoms[0]["object_type"] == "ipv4-addr"
+    assert atoms[0]["value"] == "198.51.100.1"
+    observable = observables_from_stix_pattern(pattern)
+    assert observable["ip"] == "198.51.100.1"
+    assert observable["hash_sha256"] == "aa"
+
+
+def test_opencti_adapter_flattens_stix_indicator_pattern():
+    result = OpenCTIAdapter.adapt({
+        "id": "indicator--11111111-1111-4111-8111-111111111111",
+        "type": "indicator",
+        "spec_version": "2.1",
+        "name": "known bad host",
+        "pattern": "[domain-name:value = 'evil.example']",
+        "pattern_type": "stix",
+        "valid_from": "2026-01-01T00:00:00Z",
+        "confidence": 80,
+    })
+    assert result.event.observable["domain"] == "evil.example"
+    assert result.event.observable["stix_id"].startswith("indicator--")
+    assert result.event.confidence == pytest.approx(0.8)
+    assert result.event.threat is None
+    assert result.event.entity["pattern_type"] == "stix"
+
+
+def test_opencti_adapter_rejects_stix_bundles():
+    with pytest.raises(AdapterError):
+        OpenCTIAdapter.adapt({
+            "type": "bundle",
+            "id": "bundle--1",
+            "objects": [{"type": "indicator", "id": "indicator--1"}],
+        })
+
+
+def test_misp_adapter_maps_event_attributes_and_ignores_threat_level():
+    result = MISPAdapter.adapt({
+        "Event": {
+            "uuid": "11111111-1111-4111-8111-111111111111",
+            "info": "test campaign",
+            "threat_level_id": "1",
+            "date": "2026-01-01",
+            "Attribute": [
+                {"uuid": "a1", "type": "ip-src", "value": "10.0.0.1", "to_ids": True},
+                {"uuid": "a2", "type": "filename|sha256", "value": "dropper.exe|ab", "to_ids": True},
+            ],
+        }
+    })
+    assert result.event.source == "misp"
+    assert result.event.observable["src_ip"] == "10.0.0.1"
+    assert result.event.observable["filename"] == "dropper.exe"
+    assert result.event.observable["hash_sha256"] == "ab"
+    assert result.event.entity["threat_level_id"] == "1"
+    assert result.event.confidence is None
+    assert result.event.threat is None
+
+
+def test_misp_single_attribute_still_maps():
+    result = MISPAdapter.adapt({
+        "uuid": "attr-1",
+        "type": "domain",
+        "value": "evil.example",
+        "confidence": 40,
+        "timestamp": "1767225600",
+    })
+    assert result.event.observable["domain"] == "evil.example"
+    assert result.event.confidence == pytest.approx(0.4)
