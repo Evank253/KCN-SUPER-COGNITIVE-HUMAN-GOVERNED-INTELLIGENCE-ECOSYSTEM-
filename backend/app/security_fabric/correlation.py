@@ -17,13 +17,11 @@ class CorrelationEngine:
 
     @staticmethod
     def _keys(event: SecurityEvent) -> set[tuple[str, str]]:
-        keys: set[tuple[str, str]] = set()
-        for key, value in event.observable.items():
-            if value is not None:
-                keys.add((str(key), str(value)))
-        if event.session_id if False else False:  # pragma: no cover
-            pass
-        return keys
+        return {
+            (str(key), str(value))
+            for key, value in event.observable.items()
+            if value is not None
+        }
 
     def correlate(self, events: Iterable[SecurityEvent]) -> list[list[SecurityEvent]]:
         groups: list[list[SecurityEvent]] = []
@@ -34,7 +32,10 @@ class CorrelationEngine:
             candidates: set[int] = set()
             for key in self._keys(event):
                 candidates.update(indexed.get(key, []))
-            selected = next((idx for idx in sorted(candidates) if self._compatible(ordered[idx], event)), None)
+            selected = next(
+                (idx for idx in sorted(candidates) if self._compatible(groups[idx][0], event)),
+                None,
+            )
             if selected is None:
                 groups.append([event])
                 group_id = len(groups) - 1
