@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.security_fabric.adapters import ADAPTERS, AdapterError, OpenCTIAdapter, SuricataAdapter, ZeekAdapter
+from app.security_fabric.adapters import ADAPTERS, OpenCTIAdapter, SuricataAdapter, ZeekAdapter
 from app.security_fabric.cases import SecurityCase
 from app.security_fabric.correlation import CorrelationEngine
 from app.security_fabric.evidence import build_evidence
