@@ -6,7 +6,7 @@ Vendor-specific events must be converted to this model before entering KCN.
 from datetime import datetime, timezone
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class SecurityEvent(BaseModel):
@@ -36,6 +36,14 @@ class SecurityEvent(BaseModel):
     replay_reference: str | None = None
     verification_status: str = "NOT_MEASURED"
     human_authority: str | None = None
+
+    @field_validator("timestamp")
+    @classmethod
+    def normalize_timestamp(cls, value: datetime) -> datetime:
+        """Require a deterministic UTC-aware timestamp for correlation/replay."""
+        if value.tzinfo is None or value.utcoffset() is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
 
     @classmethod
     def now(cls, **kwargs: Any) -> "SecurityEvent":
