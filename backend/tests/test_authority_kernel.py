@@ -175,7 +175,7 @@ def test_expiration_dominates_authorization():
     result = AuthorizationEngine().authorize(
         AuthorizationRequest(
             action_id="act-5", requesting_principal="agent:a",
-            requested_action="run.test", evaluated_at=NOW
+            requested_action="run.test", evaluated_at=NOW + timedelta(seconds=2)
         ), registry.state
     )
     assert result.decision == "DENY"
