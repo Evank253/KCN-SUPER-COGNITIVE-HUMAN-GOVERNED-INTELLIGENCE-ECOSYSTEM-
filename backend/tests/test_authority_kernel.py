@@ -171,7 +171,7 @@ def test_revocation_dominates_prior_authorization():
 
 def test_expiration_dominates_authorization():
     registry = AuthorityRegistry()
-    registry.apply_event(event(grant(valid_until=NOW - timedelta(seconds=1))))
+    registry.apply_event(event(grant(valid_until=NOW + timedelta(seconds=1))))
     result = AuthorizationEngine().authorize(
         AuthorizationRequest(
             action_id="act-5", requesting_principal="agent:a",
