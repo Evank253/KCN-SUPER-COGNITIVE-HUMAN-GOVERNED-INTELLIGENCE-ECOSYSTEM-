@@ -2,7 +2,7 @@ name: Deploy public demo to GitHub Pages
 
 on:
   push:
-    branches: ["copilot/kcn-super-cognitive-ecosystem", main, develop]
+    branches: ["copilot/kcn-super-cognitive-ecosystem", "main", "develop"]
   workflow_dispatch:
 
 permissions:
