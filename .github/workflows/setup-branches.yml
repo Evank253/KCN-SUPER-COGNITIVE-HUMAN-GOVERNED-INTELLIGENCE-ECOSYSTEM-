@@ -1,0 +1,161 @@
+# setup-branches.yml
+#
+# PURPOSE
+# -------
+# Idempotently ensures that the `main` and `develop` branches exist and
+# have appropriate branch-protection rules applied via the GitHub REST API.
+#
+# HOW TO RUN
+# ----------
+# 1. Go to Actions → "Setup Branches & Protections" → Run workflow.
+# 2. No inputs are required.
+#
+# TOKEN REQUIREMENTS
+# ------------------
+# The built-in GITHUB_TOKEN is used.  For *public* repositories it can
+# manage branch protections.  For *private* repositories or organisation
+# repos that enforce SSO you may need to replace `GITHUB_TOKEN` with a
+# Personal Access Token (PAT) stored as a repository secret (e.g.
+# `SETUP_BRANCHES_PAT`) that has the `repo` and `admin:repo_hook` scopes.
+# To do so, change every `${{ secrets.GITHUB_TOKEN }}` reference below to
+# `${{ secrets.SETUP_BRANCHES_PAT }}`.
+
+name: Setup Branches & Protections
+
+on:
+  workflow_dispatch: {}   # Manual trigger only
+
+permissions:
+  contents: write        # Create / push branches
+  administration: write  # Apply branch-protection rules via REST API
+
+jobs:
+  setup:
+    name: Ensure branches and protections
+    runs-on: ubuntu-latest
+
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+
+    steps:
+      # ------------------------------------------------------------------ #
+      # 1. Checkout so we have a local git context                          #
+      # ------------------------------------------------------------------ #
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Full history so we can push new branches
+
+      # ------------------------------------------------------------------ #
+      # 2. Ensure `main` exists                                             #
+      # ------------------------------------------------------------------ #
+      - name: Ensure branch 'main' exists
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if git ls-remote --exit-code origin refs/heads/main > /dev/null 2>&1; then
+            echo "✅  Branch 'main' already exists – nothing to do."
+          else
+            echo "⚠️  Branch 'main' does not exist.  Creating from current HEAD …"
+            git push origin HEAD:main
+            echo "✅  Branch 'main' created and pushed."
+          fi
+
+      # ------------------------------------------------------------------ #
+      # 3. Ensure `develop` exists (create from `main` if absent)          #
+      # ------------------------------------------------------------------ #
+      - name: Ensure branch 'develop' exists
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if git ls-remote --exit-code origin refs/heads/develop > /dev/null 2>&1; then
+            echo "✅  Branch 'develop' already exists – nothing to do."
+          else
+            echo "⚠️  Branch 'develop' does not exist.  Creating from 'main' …"
+            git fetch origin main
+            git checkout -b develop origin/main
+            git push origin develop
+            echo "✅  Branch 'develop' created from 'main' and pushed."
+          fi
+
+      # ------------------------------------------------------------------ #
+      # 4. Apply branch protections for `main`                             #
+      # ------------------------------------------------------------------ #
+      - name: Apply branch protection for 'main'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "🔒  Applying branch-protection rules for 'main' …"
+
+          gh api \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${REPO}/branches/main/protection" \
+            --input - <<'EOF'
+          {
+            "required_status_checks": null,
+            "enforce_admins": true,
+            "required_pull_request_reviews": {
+              "dismiss_stale_reviews": true,
+              "require_code_owner_reviews": false,
+              "required_approving_review_count": 1
+            },
+            "restrictions": null,
+            "allow_force_pushes": false,
+            "allow_deletions": false,
+            "block_creations": false,
+            "required_conversation_resolution": false
+          }
+          EOF
+
+          echo "✅  Branch-protection rules applied for 'main'."
+
+      # ------------------------------------------------------------------ #
+      # 5. Apply branch protections for `develop`                          #
+      # ------------------------------------------------------------------ #
+      - name: Apply branch protection for 'develop'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "🔒  Applying branch-protection rules for 'develop' …"
+
+          gh api \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${REPO}/branches/develop/protection" \
+            --input - <<'EOF'
+          {
+            "required_status_checks": null,
+            "enforce_admins": false,
+            "required_pull_request_reviews": {
+              "dismiss_stale_reviews": false,
+              "require_code_owner_reviews": false,
+              "required_approving_review_count": 1
+            },
+            "restrictions": null,
+            "allow_force_pushes": false,
+            "allow_deletions": false,
+            "block_creations": false,
+            "required_conversation_resolution": false
+          }
+          EOF
+
+          echo "✅  Branch-protection rules applied for 'develop'."
+
+      # ------------------------------------------------------------------ #
+      # 6. Summary                                                          #
+      # ------------------------------------------------------------------ #
+      - name: Summary
+        shell: bash
+        run: |
+          echo "🎉  Branch setup and protection configuration complete."
+          echo ""
+          echo "  main    → protected (1 PR review required, stale reviews dismissed,"
+          echo "             force-push & deletion blocked, admins enforced)"
+          echo "  develop → protected (1 PR review required,"
+          echo "             force-push & deletion blocked)"
