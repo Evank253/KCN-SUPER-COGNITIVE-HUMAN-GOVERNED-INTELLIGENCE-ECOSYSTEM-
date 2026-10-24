@@ -6,21 +6,17 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
+
+from app.security_fabric.governance_store import GovernanceStore
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/governance")
-
-
-# ---------------------------------------------------------------------------
-# Schemas
-# ---------------------------------------------------------------------------
+_store = GovernanceStore()
 
 
 class Policy(BaseModel):
-    """A governance policy record."""
-
     id: str
     name: str
     description: str
@@ -30,40 +26,37 @@ class Policy(BaseModel):
 
 
 class PolicyListResponse(BaseModel):
-    """Paginated list of governance policies."""
-
     policies: list[Policy]
     total: int
 
 
 class ApprovalRequest(BaseModel):
-    """Request body for submitting a human approval request."""
+    """Submit a request; case_id binds authorization to a SecurityCase."""
 
     action_type: str = Field(..., min_length=1, max_length=128)
     description: str = Field(..., min_length=1, max_length=1024)
+    case_id: str | None = Field(default=None, min_length=1, max_length=128)
     data: dict | None = None
 
 
 class ApprovalResponse(BaseModel):
-    """Response after submitting an approval request."""
-
     id: str
     status: str
     created_at: str
+    case_id: str | None = None
+    human_authority: str | None = None
 
 
-# ---------------------------------------------------------------------------
-# Stub data (replaced by database layer in Phase 2)
-# ---------------------------------------------------------------------------
+class ApprovalDecision(BaseModel):
+    status: str = Field(..., pattern="^(approved|rejected)$")
+    human_authority: str = Field(..., min_length=1, max_length=256)
+
 
 _STUB_POLICIES = [
     Policy(
         id="pol-001",
         name="Human Approval Required for High-Risk Actions",
-        description=(
-            "All actions classified as high-risk must receive explicit human "
-            "approval before execution."
-        ),
+        description="All actions classified as high-risk must receive explicit human approval before execution.",
         enabled=True,
         created_at="2026-08-01T00:00:00Z",
         updated_at="2026-08-01T00:00:00Z",
@@ -71,10 +64,7 @@ _STUB_POLICIES = [
     Policy(
         id="pol-002",
         name="AI Output Verification Mandatory",
-        description=(
-            "All Intelligence Core outputs must pass through the Verification "
-            "Core before entering the Knowledge Core."
-        ),
+        description="All Intelligence Core outputs must pass through the Verification Core before entering the Knowledge Core.",
         enabled=True,
         created_at="2026-08-01T00:00:00Z",
         updated_at="2026-08-01T00:00:00Z",
@@ -82,10 +72,7 @@ _STUB_POLICIES = [
     Policy(
         id="pol-003",
         name="Audit Trail Immutability",
-        description=(
-            "Audit logs may not be modified or deleted once written. "
-            "All audit events are retained for a minimum of 12 months."
-        ),
+        description="Audit logs may not be modified or deleted once written. All audit events are retained for a minimum of 12 months.",
         enabled=True,
         created_at="2026-08-01T00:00:00Z",
         updated_at="2026-08-01T00:00:00Z",
@@ -93,53 +80,59 @@ _STUB_POLICIES = [
 ]
 
 
-# ---------------------------------------------------------------------------
-# Routes
-# ---------------------------------------------------------------------------
-
-
-@router.get(
-    "/policies",
-    response_model=PolicyListResponse,
-    status_code=status.HTTP_200_OK,
-    summary="List governance policies",
-)
+@router.get("/policies", response_model=PolicyListResponse, status_code=status.HTTP_200_OK)
 async def list_policies() -> PolicyListResponse:
-    """
-    Return all active governance policies.
-
-    Requires `admin` or `governance_viewer` role.
-    Authentication and RBAC enforcement will be added in Phase 2.
-    """
+    """Return all active governance policies."""
     return PolicyListResponse(policies=_STUB_POLICIES, total=len(_STUB_POLICIES))
 
 
-@router.post(
-    "/approvals",
-    response_model=ApprovalResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Submit approval request",
-)
+@router.post("/approvals", response_model=ApprovalResponse, status_code=status.HTTP_201_CREATED)
 async def submit_approval(request: ApprovalRequest) -> ApprovalResponse:
-    """
-    Submit a request for human approval.
-
-    Returns a pending approval record. Human reviewers will evaluate and
-    approve or reject the request via the governance dashboard.
-    Full workflow integration is planned for Phase 2.
-    """
+    """Persist a pending approval request; it is not authorization."""
     approval_id = f"appr-{uuid.uuid4().hex[:12]}"
-    created_at = datetime.now(timezone.utc).isoformat()
-
-    logger.info(
-        "Approval request submitted: id=%s action_type=%s",
-        approval_id,
-        request.action_type,
+    record = _store.create(
+        approval_id=approval_id,
+        case_id=request.case_id,
+        action_type=request.action_type,
+        description=request.description,
+        data=request.data,
     )
-
-    # TODO(Phase 2): Persist approval request to database and notify reviewers
+    logger.info("Approval request submitted: id=%s action_type=%s case_id=%s", approval_id, request.action_type, request.case_id)
     return ApprovalResponse(
         id=approval_id,
-        status="pending",
-        created_at=created_at,
+        status=record["status"],
+        created_at=record["created_at"],
+        case_id=record["case_id"],
+    )
+
+
+@router.get("/approvals/{approval_id}", response_model=ApprovalResponse)
+async def get_approval(approval_id: str) -> ApprovalResponse:
+    record = _store.get(approval_id)
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="approval not found")
+    return ApprovalResponse(
+        id=approval_id,
+        status=record["status"],
+        created_at=record["created_at"],
+        case_id=record.get("case_id"),
+        human_authority=record.get("human_authority"),
+    )
+
+
+@router.post("/approvals/{approval_id}/decision", response_model=ApprovalResponse)
+async def decide_approval(approval_id: str, decision: ApprovalDecision) -> ApprovalResponse:
+    """Record an explicit human decision; only this transition supplies authority."""
+    try:
+        record = _store.decide(approval_id, decision.status, decision.human_authority)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="approval not found")
+    return ApprovalResponse(
+        id=approval_id,
+        status=record["status"],
+        created_at=record["created_at"],
+        case_id=record.get("case_id"),
+        human_authority=record.get("human_authority"),
     )
