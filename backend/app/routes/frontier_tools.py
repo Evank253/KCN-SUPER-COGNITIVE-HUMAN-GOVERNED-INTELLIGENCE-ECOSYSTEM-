@@ -427,9 +427,17 @@ async def execute_tool(body: dict[str, Any]) -> dict[str, Any]:
         sandboxed = bool(args.get("sandboxed"))
         network = bool(args.get("network_enabled"))
         human = bool(args.get("human_subjects"))
-        approval = bool(args.get("approval"))
-        ok = sandboxed and not network and (approval if human else True)
-        result = {"can_run": ok, "ts": _ts(), "rules": "sandbox=on network=off human→approval"}
+        # Caller-supplied booleans/strings are not human approval evidence.
+        # This module has no trusted, authenticated approval-record verifier yet,
+        # so human-subject operations fail closed regardless of args["approval"].
+        trusted_approval = False
+        ok = sandboxed and not network and (trusted_approval if human else True)
+        result = {
+            "can_run": ok,
+            "ts": _ts(),
+            "rules": "sandbox=on network=off human→server-verified approval record",
+            "approval_source": "none; approval service not integrated",
+        }
     elif name == "tracking_append":
         e = _log(str(args.get("phase", "track")), "ok", str(args.get("detail", "")), actor="tool")
         result = {"appended": e}
