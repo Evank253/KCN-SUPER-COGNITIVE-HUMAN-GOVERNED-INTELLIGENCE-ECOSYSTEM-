@@ -6,13 +6,15 @@ than treating a recommendation response as execution authorization.
 import pytest
 
 from backend.app.routes.frontier_tools import execute_tool
+pytestmark = pytest.mark.asyncio
+
 from integration_layer.data_fabric.provenance_sync import (
     ProvenanceRecord,
     ProvenanceSync,
 )
 
 
-@pytest.mark.parametrize("approval", [False, "false", "0", 0, None])
+@pytest.mark.parametrize("approval", [False, "false", "0", 0, None, True])
 async def test_experiment_gate_rejects_missing_or_false_human_approval(approval):
     response = await execute_tool({
         "name": "experiment_gate",
