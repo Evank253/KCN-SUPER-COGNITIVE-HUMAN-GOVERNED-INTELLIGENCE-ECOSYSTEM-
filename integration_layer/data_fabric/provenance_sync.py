@@ -167,6 +167,20 @@ class ProvenanceSync:
                 chain.verification_notes.append(f"Cycle detected at {rec.record_id}")
                 return False
             seen.add(rec.record_id)
+            record_payload = {
+                "subject_id": rec.subject_id,
+                "subject_type": rec.subject_type,
+                "action": rec.action,
+                "actor_id": rec.actor_id,
+                "parent_ids": sorted(rec.parent_ids),
+                "content_hash": rec.content_hash,
+                "hash_algorithm": rec.hash_algorithm.value,
+                "metadata": rec.metadata,
+            }
+            expected_id = ProvenanceRecord.compute_content_hash(record_payload, rec.hash_algorithm)
+            if rec.record_id != expected_id:
+                chain.verification_notes.append(f"Record digest mismatch at {rec.record_id}")
+                return False
             for pid in rec.parent_ids:
                 if pid not in self._records:
                     chain.verification_notes.append(f"Dangling parent {pid}")
